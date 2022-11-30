@@ -23,6 +23,8 @@
 #include <algorithm>
 #include "hungarian_assigner/hungarian_assigner.hpp"
 #include "common/types.hpp"
+// #include <Eigen/Core>
+// #include <iostream>
 
 using autoware::common::types::bool8_t;
 using autoware::common::types::float32_t;
@@ -155,6 +157,11 @@ void hungarian_assigner_c<Capacity>::reset(const index_t num_rows, const index_t
 template<uint16_t Capacity>
 void hungarian_assigner_c<Capacity>::find_minimums()
 {
+  // Eigen::Matrix<double, 3, 3> A; 
+  // A.fill(10.0);
+  // std::cout<<A(0,0)<<std::endl;
+
+
   for (auto i = index_t(); i < m_weight_matrix.rows(); ++i) {
     m_row_min_weights[i] = m_weight_matrix.row(i).minCoeff(&m_row_min_idx[i]);
   }

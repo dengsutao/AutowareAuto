@@ -109,6 +109,8 @@ PointCloud2FilterTransformNode::PointCloud2FilterTransformNode(
   rclcpp::Parameter trans_y_param;
   rclcpp::Parameter trans_z_param;
 
+  
+
 
   /// If transform parameters exist in the param file use them
   if (this->get_parameter("static_transformer.quaternion.x", quat_x_param) &&

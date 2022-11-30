@@ -4,3 +4,4 @@ build
 .vscode
 log
 svlsimulator-linux64-2021.3
+*.pyc
