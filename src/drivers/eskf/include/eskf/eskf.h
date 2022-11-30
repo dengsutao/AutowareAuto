@@ -122,6 +122,9 @@ private:
 
     size_t max_queue_length = 10;
 
+    rclcpp::Time init_stamp;
+    rclcpp::Time cur_stamp;
+
 private:
     void SetCovarianceQ(double gyro_noise_cov, double accel_noise_cov);
 
