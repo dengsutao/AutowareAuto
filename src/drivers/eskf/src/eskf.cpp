@@ -270,10 +270,14 @@ void eskf::imu_callback(const sensor_msgs::msg::Imu::SharedPtr imu_msg)
         std_msgs::msg::UInt32 reset_odom_value;
         reset_odom_value.data = 1;
         reset_odom_pub->publish(reset_odom_value);
+
+        // 记录起始时间
+        init_stamp = imu_msg->header.stamp;
         return;
 
     }
 
+    cur_stamp = imu_msg->header.stamp;
     // 处理imu，首先只依赖imu数据进行路径预测，然后查看gps_data_buff_,odom_data_buff_,
     // 如果有缓存，取最后一条更新。
     predict();
@@ -602,7 +606,9 @@ bool eskf::record()
             <<std::endl;
     nav_msgs::msg::Odometry fused_pose;
     fused_pose.header.frame_id = "odom";
-    fused_pose.header.stamp = get_clock()->now();
+    auto duration = cur_stamp - init_stamp;
+    fused_pose.header.stamp.sec = duration.seconds();
+    fused_pose.header.stamp.nanosec = duration.nanoseconds();
 
     fused_pose.pose.pose.position.x = curr_e;
     fused_pose.pose.pose.position.y = curr_n;
