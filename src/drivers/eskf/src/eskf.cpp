@@ -606,9 +606,10 @@ bool eskf::record()
             <<std::endl;
     nav_msgs::msg::Odometry fused_pose;
     fused_pose.header.frame_id = "odom";
+    fused_pose.child_frame_id = "base_link";
     auto duration = cur_stamp - init_stamp;
     fused_pose.header.stamp = rclcpp::Time(0,0) + duration;
-    // fused_pose.header.stamp = get_clock()->now(); 
+    // fused_pose.header.stamp = cur_stamp; 
 
     fused_pose.pose.pose.position.x = curr_e;
     fused_pose.pose.pose.position.y = curr_n;
@@ -926,7 +927,7 @@ eskf::eskf(std::string name): Node(name)
 {
     // init subscriber
     gps_sub = this->create_subscription<sensor_msgs::msg::NavSatFix>("gps", 10, std::bind(&eskf::gps_callback, this, std::placeholders::_1));
-    imu_sub = this->create_subscription<sensor_msgs::msg::Imu>("imu1", 10, std::bind(&eskf::imu_callback, this, std::placeholders::_1));
+    imu_sub = this->create_subscription<sensor_msgs::msg::Imu>("imu1", 100, std::bind(&eskf::imu_callback, this, std::placeholders::_1));
     odom_sub = this->create_subscription<nav_msgs::msg::Odometry>("odom", 50, std::bind(&eskf::odom_callback, this, std::placeholders::_1));
 
     // 重置odom数据
