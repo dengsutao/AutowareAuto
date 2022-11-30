@@ -607,8 +607,8 @@ bool eskf::record()
     nav_msgs::msg::Odometry fused_pose;
     fused_pose.header.frame_id = "odom";
     auto duration = cur_stamp - init_stamp;
-    fused_pose.header.stamp.sec = duration.seconds();
-    fused_pose.header.stamp.nanosec = duration.nanoseconds();
+    fused_pose.header.stamp = rclcpp::Time(0,0) + duration;
+    // fused_pose.header.stamp = get_clock()->now(); 
 
     fused_pose.pose.pose.position.x = curr_e;
     fused_pose.pose.pose.position.y = curr_n;
