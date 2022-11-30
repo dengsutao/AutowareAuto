@@ -16,14 +16,14 @@
       frame_id: "base_link"
       min_number_of_points_in_cluster: 10
       max_num_clusters: 256
-      min_cluster_threshold_m: 0.5
-      max_cluster_threshold_m: 1.5
+      min_cluster_threshold_m: 0.2
+      max_cluster_threshold_m: 0.3
       threshold_saturation_distance_m: 60.0
     hash:
-      min_x: -130.0
-      max_x:  130.0
-      min_y: -130.0
-      max_y:  130.0
+      min_x: -30.0
+      max_x:  30.0
+      min_y: -30.0
+      max_y:  30.0
       side_length: 1.0
     filter:
       min_x: 0.2
@@ -34,12 +34,12 @@
       max_z: 20.0
     voxel:
       min_point:
-        x: -130.0
-        y: -130.0
+        x: -30.0
+        y: -30.0
         z: -1.5
       max_point:
-        x: 130.0
-        y: 130.0
+        x: 30.0
+        y: 30.0
         z: 4.0
       voxel_size:
         x: 0.2
