@@ -22,6 +22,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -39,6 +40,7 @@ ament_package()
 include_directories(include ${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
 include_directories(include/${PROJECT_NAME})
 include_directories(3rd/GeographicLib/include)
+include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
 
 add_library(DEPS SHARED
     3rd/GeographicLib/src/LocalCartesian.cpp
