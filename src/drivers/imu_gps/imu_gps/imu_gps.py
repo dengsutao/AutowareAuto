@@ -120,22 +120,23 @@ def split_data(inputdata):
     elif inputdata[0] == 0x55 and inputdata[1] == 0x51:
         print('加速度')
         linear_acceleration = get_acc(inputdata[2:10])
-        # END to ENU
-        linear_acceleration[2] = -linear_acceleration[2]
+        # # END to ENU
+        # linear_acceleration[2] = -linear_acceleration[2]
         return {'linear_acceleration':linear_acceleration}
     elif inputdata[0] == 0x55 and inputdata[1] == 0x52:
         print('角速度')
         angular_velocity = get_gyro(inputdata[2:10])
-        # WSU to ENU
-        angular_velocity[0] = -angular_velocity[0]
-        angular_velocity[1] = -angular_velocity[1]
+        # # WSU to ENU
+        # angular_velocity[0] = -angular_velocity[0]
+        # angular_velocity[1] = -angular_velocity[1]
         return {"angular_velocity":angular_velocity}
     elif inputdata[0] == 0x55 and inputdata[1] == 0x53:
         print('角度')
         angle_degree = get_angle(inputdata[2:10])
-        # WSU to ENU
-        angle_degree[0] = -angle_degree[0]
-        angle_degree[1] = -angle_degree[1]
+        # # WSU to ENU
+        # angle_degree[0] = -angle_degree[0]
+        # angle_degree[1] = -angle_degree[1]
+        # # angle_degree[2] = angle_degree[2] % 360 - 180
         return {"angle_degree":angle_degree}
     elif inputdata[0] == 0x55 and inputdata[1] == 0x54:
         print('磁场')
@@ -168,7 +169,7 @@ def split_data(inputdata):
 
 def read_one_batch(ser):
     data_dict = {}
-    for i in range(10):
+    for i in range(8):
         datahex = ser.read(11)
         data = split_data(datahex)
         if not data is None:
@@ -180,6 +181,7 @@ class IMU_GPS_Node(Node):
         super().__init__(name)
         self.declare_parameter("port", "/dev/imu_gps_usb")
         self.declare_parameter("baudrate", 115200)
+        self.declare_parameter("debug", False)
         self.timeout = 0.5
         self.pub_imu = self.create_publisher(Imu, "imu1", 100)
         self.pub_gps = self.create_publisher(NavSatFix, "gps", 10)
@@ -230,8 +232,9 @@ class IMU_GPS_Node(Node):
         gps_msg.longitude = data_dict["lla"][1]
         gps_msg.altitude = data_dict["lla"][2]
         self.pub_gps.publish(gps_msg)
-        self.get_logger().info("imu:\n"+"angle-->"+str(data_dict['angle_degree'])+"\nori-->"+str(imu_msg.orientation)+"\nangular_velocity-->"+str(imu_msg.angular_velocity)+"\nlinear_acceleration-->"+str(imu_msg.linear_acceleration))
-        self.get_logger().info("gps:\n"+"lat,lon,alt-->"+str(gps_msg.latitude)+","+str(gps_msg.longitude)+","+str(gps_msg.altitude))
+        if self.get_parameter("debug").value:
+            self.get_logger().info("imu:\n"+"angle-->"+str(data_dict['angle_degree'])+"\nori-->"+str(imu_msg.orientation)+"\nangular_velocity-->"+str(imu_msg.angular_velocity)+"\nlinear_acceleration-->"+str(imu_msg.linear_acceleration))
+            self.get_logger().info("gps:\n"+"lat,lon,alt-->"+str(gps_msg.latitude)+","+str(gps_msg.longitude)+","+str(gps_msg.altitude))
 
 def main(args=None):
     rclpy.init(args=args)

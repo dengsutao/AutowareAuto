@@ -45,7 +45,7 @@ turn_on_robot::turn_on_robot(std::string name):Node(name)
     declare_parameter<std::string>("odom_frame_id",    odom_frame_id);      //The odometer topic corresponds to the parent TF coordinate //里程计话题对应父TF坐标
     declare_parameter<std::string>("robot_frame_id",   robot_frame_id); //The odometer topic corresponds to sub-TF coordinates //里程计话题对应子TF坐标
     declare_parameter<std::string>("gyro_frame_id",    gyro_frame_id); //IMU topics correspond to TF coordinates //IMU话题对应TF坐标
-
+    declare_parameter<bool>("debug", false);
     reset_odom = false;
 
     try
@@ -274,13 +274,13 @@ void turn_on_robot::Publish_Odom()
       memcpy(&odom.pose.covariance, odom_pose_covariance, sizeof(odom_pose_covariance)),
       memcpy(&odom.twist.covariance, odom_twist_covariance, sizeof(odom_twist_covariance));       
     odom_publisher->publish(odom); //Pub odometer topic //发布里程计话题
-    
-    std::cout<<"odom:"<<odom.pose.pose.position.x<<\
-                    ","<<odom.pose.pose.position.y<<\
-                    ","<<odom.pose.pose.position.z<<\
-                    ","<<odom.twist.twist.linear.x<<\
-                    ","<<odom.twist.twist.linear.y<<\
-                    ","<<odom.twist.twist.angular.z<<std::endl;
+    if (get_parameter("debug").as_bool())
+    RCLCPP_INFO(get_logger(), "odom:"+std::to_string(odom.pose.pose.position.x)+\
+                                ","+std::to_string(odom.pose.pose.position.y)+\
+                                ","+std::to_string(odom.pose.pose.position.z)+\
+                                ","+std::to_string(odom.twist.twist.linear.x)+\
+                                ","+std::to_string(odom.twist.twist.linear.y)+\
+                                ","+std::to_string(odom.twist.twist.angular.z));
                     
 }
 
