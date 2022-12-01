@@ -57,7 +57,7 @@ using std::placeholders::_2;
 
 namespace
 {
-constexpr std::chrono::milliseconds kMaxLidarEgoStateStampDiff{100};//rmflag
+constexpr std::chrono::milliseconds kMaxLidarEgoStateStampDiff{1000};//rmflag
 constexpr std::int64_t kDefaultHistoryDepth{20};
 constexpr std::int64_t kDefaultPoseHistoryDepth{100};
 
@@ -315,7 +315,7 @@ MultiObjectTrackerNode::TrackerVariant MultiObjectTrackerNode::init_tracker(
 
 void MultiObjectTrackerNode::clusters_callback(const ClustersMsg::ConstSharedPtr objs)
 {
-  const rclcpp::Time msg_stamp{objs->header.stamp.sec+1669800010, objs->header.stamp.nanosec};//rmflag
+  const rclcpp::Time msg_stamp{objs->header.stamp.sec, objs->header.stamp.nanosec};//rmflag
   const auto earliest_time = msg_stamp - kMaxLidarEgoStateStampDiff;
   const auto latest_time = msg_stamp + kMaxLidarEgoStateStampDiff;
   const auto matched_msgs = m_odom_cache->getInterval(earliest_time, latest_time);

@@ -113,7 +113,7 @@ private:
     const builtin_interfaces::msg::Time & rois_stamp,
     DetectedObjects all_objects);
 
-  bool8_t m_visualize_track_creation = false;
+  bool8_t m_visualize_track_creation = true;
 
   rclcpp::Publisher<DetectedObjects>::SharedPtr m_track_creating_clusters_pub;
 };
