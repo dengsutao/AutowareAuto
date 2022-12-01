@@ -204,6 +204,7 @@ public:
     rclcpp::Publisher<std_msgs::msg::UInt32>::SharedPtr reset_odom_pub;
 
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr fused_pose_pub;
+    rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr fused_pose_pub1;
 
     bool predict();
     bool odom_correct();

@@ -620,6 +620,10 @@ bool eskf::record()
     fused_pose.pose.pose.orientation.y = quat.y();
     fused_pose.pose.pose.orientation.z = quat.z();
     fused_pose_pub->publish(fused_pose);
+
+    nav_msgs::msg::Odometry fused_pose1 = fused_pose;
+    fused_pose1.header.stamp = get_clock()->now();
+    fused_pose_pub1->publish(fused_pose1);
     return true;
 }
 
@@ -934,6 +938,7 @@ eskf::eskf(std::string name): Node(name)
     reset_odom_pub = create_publisher<std_msgs::msg::UInt32>("reset_odom", 10);
     // 最终pub的数据
     fused_pose_pub = create_publisher<nav_msgs::msg::Odometry>("fused_pose", 10);
+    fused_pose_pub1 = create_publisher<nav_msgs::msg::Odometry>("fused_pose1", 10);
     // 小车目标速度的publisher
     twist_pub = create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
     // 默认小车自身坐标系下y方向速度为0
