@@ -196,6 +196,7 @@ void EuclideanClusterNode::publish_clusters(
   const std_msgs::msg::Header & header)
 {
   m_clusters.header = header;
+  m_clusters.header.stamp = get_clock()->now();;
   m_cluster_pub_ptr->publish(clusters);
 }
 ////////////////////////////////////////////////////////////////////////////////

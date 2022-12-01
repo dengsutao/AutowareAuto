@@ -154,7 +154,7 @@ def generate_launch_description():
         remappings=[
             ("detected_objects", "/lidars/lidar_detected_objects"),
             #("ego_state", "/vehicle/odom_pose"),
-            ("ego_state", "/fused_pose"),
+            ("ego_state", "/fused_pose1"),
             ("classified_rois1", "/perception/ground_truth_detections_2d"),
             ("clusters", "/lidars/cluster_points")
         ],
