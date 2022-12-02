@@ -16,6 +16,16 @@
   <link name="base_link">
     <visual>
       <geometry>
+        <cylinder length="0.05" radius="0.05"/>
+      </geometry>
+      <material name="red"/>
+      <origin xyz="0 0 0.025" rpy="0 0 0"/>
+    </visual>
+  </link>
+
+  <link name="axis">
+    <visual>
+      <geometry>
         <cylinder length="0.3" radius="0.2"/>
       </geometry>
       <material name="black"/>
@@ -37,31 +47,6 @@
     </inertial>
   </link>
 
-  <!-- Center of Gravity link -->
-  <link name="nav_base"/>
-
-  <joint name="nav_base_joint" type="fixed">
-    <parent link="base_link"/>
-    <child link="nav_base"/>
-    <origin xyz="0 0 0" rpy="0 0 0"/>
-  </joint>
-
-  <link name="imu"/>
-
-  <joint name="imu_joint" type="fixed">
-    <parent link="base_link"/>
-    <child link="imu"/>
-    <origin xyz="0 0 0" rpy="0 0 0"/>
-  </joint>
-
-  <link name="gnss"/>
-
-  <joint name="gnss_joint" type="fixed">
-    <parent link="base_link"/>
-    <child link="gnss"/>
-    <origin xyz="0 0 0" rpy="0 0 0"/>
-  </joint>
-
   <link name="lidar_front">
     <visual>
       <geometry>
@@ -74,19 +59,19 @@
         <cylinder length="0.076" radius="0.0401"/>
       </geometry>
     </collision>
-    <inertial>
-      <!-- TODO: Get or calculate inertia values -->
-      <mass value="0.1"/>
-      <inertia ixx="1.02083e-5" ixy="0" ixz="0"
-        iyy="1.02083e-5" iyz="0"
-        izz="2e-5"/>
-    </inertial>
   </link>
 
-  <joint name="lidar_front_joint" type="fixed">
+  <joint name="axis_joint" type="continuous">
     <parent link="base_link"/>
+    <child link="axis"/>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+  </joint>
+  
+  <joint name="lidar_front_joint" type="fixed">
+    <parent link="axis"/>
     <child link="lidar_front"/>
     <origin xyz="0.14965 0 0.49516" rpy="0.45 0 1.570796"/>
   </joint>
 
 </robot>
+

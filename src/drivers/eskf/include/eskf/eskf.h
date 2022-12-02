@@ -190,7 +190,7 @@ private:
      */
     void ResetState();
 
-    Eigen::Vector3d correct_eular_angle(Eigen::Vector3d eular_angle);
+    Eigen::Vector3d quat2eular(Eigen::Quaterniond quat);
 
 public:
     eskf(std::string name);

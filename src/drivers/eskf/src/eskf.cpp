@@ -108,28 +108,11 @@ IMUData eskf::convert_data(const sensor_msgs::msg::Imu::SharedPtr imu_msg)
                                         imu_msg->orientation.x, 
                                         imu_msg->orientation.y, 
                                         imu_msg->orientation.z);
-    Eigen::Quaterniond wsu2enu_quat = Eigen::AngleAxisd(0.0, Eigen::Vector3d::UnitX())*
+    Eigen::Quaterniond wsu2enu_quat = Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitZ())*
                                     Eigen::AngleAxisd(0.0, Eigen::Vector3d::UnitY())*
-                                    Eigen::AngleAxisd(90.0/180*M_PI, Eigen::Vector3d::UnitZ());
+                                    Eigen::AngleAxisd(0.0, Eigen::Vector3d::UnitX());
     imu_data.quat = imu_data.quat * wsu2enu_quat;
-    /***
-     * 解释一下矩阵转欧拉角：
-     * 0，1，2分别代表r,p,y，哪个在最前边，哪个的范围为[0,pi]，另外两个为[-pi,pi]
-     * eulerAngles()才用的右乘方式，内旋，即不以固定轴旋转，而是以自身轴旋转(动态)
-     * 内旋对应(向量的)右乘，自身轴旋转；外旋对应左乘，固定轴旋转；
-     * 可以将一个向量[w1,w2,w3]理解为对角矩阵[w1,0,0;0,w2,0;0,0,w3]与基向量[e1,e2,e3]的乘积形式
-     * 那么左乘变换矩阵A相当于先对对角矩阵做变换，而基向量不变，因此是固定轴；右乘则相当于先对基向量做变换，所以是动态轴
-     * 注意：欧拉角不等于姿态角。  
-    ***/
-    imu_data.angle = imu_data.quat.matrix().eulerAngles(0,1,2); // x,y,z
-    /***
-     * 统一一下欧拉角范围，由于x轴范围固定为[0,pi]，当超出范围时([-pi,0])，会自动将y,z轴旋转180度，以使得x轴角度为正
-     * 水平状态下，x轴角度为0/pi，
-     * 绕x轴逆时针旋转(车把向地)为0->pi/2，小车坐标系为enu, x,y,z轴数值分别为x0,y0,z0,值分别为和大地enu坐标系下z,z,y正半轴的夹角
-     * 绕x轴顺时针旋转(车头向地)为pi->pi/2，小车坐标系变为esd,x,y,z轴数值分别为x1,y1,z1,值分别为和大地esd坐标系下z,z,y正半轴的夹角
-     * 由此可以对两个坐标系进行统一，以防止不同坐标系下的值的突变，这里不做暂不做统一
-     * 使用correct_eular_angle()可以统一到小车enu坐标系
-    ***/
+    imu_data.angle = quat2eular(imu_data.quat);
 
     return imu_data;
 
@@ -151,7 +134,7 @@ ODOMData eskf::convert_data(const nav_msgs::msg::Odometry::SharedPtr odom_msg)
     odom_data.vel.z() = odom_msg->twist.twist.angular.z / kDegree2Radian; // 角速度，顺时针为负，逆时针为正，转到enu下不变
 
     // odom的z轴角度只是相对值，需要加上初始的imu yaw角。注意保证发送odom数据在初始化imu数据之后！！
-    double eular_angle_z = correct_eular_angle(init_angle_).z();
+    double eular_angle_z = init_angle_.z();
     odom_data.pose.z() += eular_angle_z / kDegree2Radian; // 后边暂时用不到
     // 由于odom只能计算enu坐标系下的相对位移
     // 默认初始yaw角为0，这里要加上初始yaw角的变换，才是odom在大地enu坐标系下的位置和速度
@@ -248,16 +231,14 @@ void eskf::imu_callback(const sensor_msgs::msg::Imu::SharedPtr imu_msg)
     // 三种传感器数据接收ready，初始化位置/姿态数据
     if (((init_flag_>>FLAG_INIT_DATA)&1)==0)
     {
-        init_angle_ = correct_eular_angle(curr_imu_data_.angle);
-        // cannot use wheel data z as the yaw angle of init state. it is relative yaw angle
-        // init_angle_[2] = curr_odom_data_.pose[2];
+        init_angle_ = curr_imu_data_.angle;
 
         // 设定初始姿态，通过angle文件第一条数据读取
         std::cout<<"initial velocity:"<<init_velocity_.transpose()<<std::endl;
         std::cout<<"initial angle:"<<init_angle_.transpose()/kDegree2Radian<<std::endl;
-        Eigen::Quaterniond Q = Eigen::AngleAxisd(init_angle_[0], Eigen::Vector3d::UnitX()) *
+        Eigen::Quaterniond Q = Eigen::AngleAxisd(init_angle_[2], Eigen::Vector3d::UnitZ()) *
                             Eigen::AngleAxisd(init_angle_[1], Eigen::Vector3d::UnitY()) *
-                            Eigen::AngleAxisd(init_angle_[2], Eigen::Vector3d::UnitZ());
+                            Eigen::AngleAxisd(init_angle_[0], Eigen::Vector3d::UnitX());
         init_pose_.block<3,3>(0,0) = Q.toRotationMatrix();
         pose_ = init_pose_;
         last_pose_ = init_pose_;
@@ -276,7 +257,7 @@ void eskf::imu_callback(const sensor_msgs::msg::Imu::SharedPtr imu_msg)
         return;
 
     }
-
+    
     cur_stamp = imu_msg->header.stamp;
     // 处理imu，首先只依赖imu数据进行路径预测，然后查看gps_data_buff_,odom_data_buff_,
     // 如果有缓存，取最后一条更新。
@@ -581,7 +562,8 @@ bool eskf::record()
     double curr_odom_u = curr_odom_data.pose.z();
 
     Eigen::Matrix3d mat = pose_.block<3,3>(0,0);
-    Eigen::Vector3d rpy = mat.eulerAngles(0,1,2);
+    Eigen::Quaterniond quat(mat);
+    Eigen::Vector3d rpy = quat2eular(quat);
 
     fout<<std::setprecision(11)<<"time:"<<curr_time\
             <<","<<" enu_pose:"<<curr_e<<","<<curr_n<<","<<curr_u\
@@ -605,8 +587,8 @@ bool eskf::record()
             <<","<<" odom_enu_pose:"<<curr_odom_e<<","<<curr_odom_n<<","<<curr_odom_u\
             <<std::endl;
     nav_msgs::msg::Odometry fused_pose;
-    fused_pose.header.frame_id = "odom";
-    fused_pose.child_frame_id = "base_link";
+    fused_pose.header.frame_id = "base_link";
+    fused_pose.child_frame_id = "odom";
     auto duration = cur_stamp - init_stamp;
     fused_pose.header.stamp = rclcpp::Time(0,0) + duration;
     // fused_pose.header.stamp = cur_stamp; 
@@ -614,11 +596,11 @@ bool eskf::record()
     fused_pose.pose.pose.position.x = curr_e;
     fused_pose.pose.pose.position.y = curr_n;
     fused_pose.pose.pose.position.z = curr_u;
-    Eigen::Quaterniond quat(mat);
-    fused_pose.pose.pose.orientation.w = quat.w();
-    fused_pose.pose.pose.orientation.x = quat.x();
-    fused_pose.pose.pose.orientation.y = quat.y();
-    fused_pose.pose.pose.orientation.z = quat.z();
+    // Eigen::Quaterniond quat(mat);
+    fused_pose.pose.pose.orientation.w = 1.0;
+    fused_pose.pose.pose.orientation.x = 0.0;
+    fused_pose.pose.pose.orientation.y = 0.0;
+    fused_pose.pose.pose.orientation.z = 0.0;
     fused_pose_pub->publish(fused_pose);
 
     nav_msgs::msg::Odometry fused_pose1 = fused_pose;
@@ -629,21 +611,21 @@ bool eskf::record()
     return true;
 }
 
-// ESD angle to ENU angle
-// x,y,z 夹角分别为与z,z,y正半轴夹角
-Eigen::Vector3d eskf::correct_eular_angle(Eigen::Vector3d eular_angle)
+Eigen::Vector3d eskf::quat2eular(Eigen::Quaterniond quat)
 {
+    auto angle_zyx = quat.matrix().eulerAngles(2,1,0); // z,y,x
+    Eigen::Vector3d angle_xyz(angle_zyx[2],angle_zyx[1],angle_zyx[0]);
     Eigen::Vector3d out;
-    if (eular_angle[0]>M_PI/2)
+    if (abs(angle_xyz[1])>M_PI/2)
     {
-        out.x() = eular_angle.x() - M_PI;
-        out.y() = eular_angle.y()>0? (M_PI-eular_angle.y()):(-M_PI-eular_angle.y());
-        out.z() = eular_angle.z()>0? (eular_angle.z()-M_PI):(eular_angle.z()+M_PI);
+        out.x() = angle_xyz.x()>0? (angle_xyz.x()-M_PI):(angle_xyz.x()+M_PI);
+        out.y() = angle_xyz.y()>0? (M_PI-angle_xyz.y()):(-M_PI-angle_xyz.y());
+        out.z() = angle_xyz.z();
     }
     else{
-        out.x() = eular_angle.x();
-        out.y() = eular_angle.y();
-        out.z() = eular_angle.z();
+        out.x() = angle_xyz.x();
+        out.y() = angle_xyz.y();
+        out.z() = angle_xyz.z()-M_PI;
     }
     return out;
 }
@@ -698,7 +680,7 @@ void eskf::thread_twist_pub()
         // Eigen::Vector3d enu_angle = correct_eular_angle(cur_angle);
 
         // std::cout<<curr_imu_data_.angle.transpose()<<std::endl;
-        Eigen::Vector3d enu_angle = correct_eular_angle(curr_imu_data_.angle);
+        Eigen::Vector3d enu_angle = curr_imu_data_.angle;
         double cur_yaw = enu_angle.z() / kDegree2Radian;
         std::cout<<enu_angle.transpose()<<std::endl;
         std::cout<<"cur/init yaw:"<<cur_yaw<<"/"<<init_yaw<<std::endl;

@@ -120,23 +120,14 @@ def split_data(inputdata):
     elif inputdata[0] == 0x55 and inputdata[1] == 0x51:
         print('加速度')
         linear_acceleration = get_acc(inputdata[2:10])
-        # # END to ENU
-        # linear_acceleration[2] = -linear_acceleration[2]
         return {'linear_acceleration':linear_acceleration}
     elif inputdata[0] == 0x55 and inputdata[1] == 0x52:
         print('角速度')
         angular_velocity = get_gyro(inputdata[2:10])
-        # # WSU to ENU
-        # angular_velocity[0] = -angular_velocity[0]
-        # angular_velocity[1] = -angular_velocity[1]
         return {"angular_velocity":angular_velocity}
     elif inputdata[0] == 0x55 and inputdata[1] == 0x53:
         print('角度')
         angle_degree = get_angle(inputdata[2:10])
-        # # WSU to ENU
-        # angle_degree[0] = -angle_degree[0]
-        # angle_degree[1] = -angle_degree[1]
-        # # angle_degree[2] = angle_degree[2] % 360 - 180
         return {"angle_degree":angle_degree}
     elif inputdata[0] == 0x55 and inputdata[1] == 0x54:
         print('磁场')
@@ -210,7 +201,7 @@ class IMU_GPS_Node(Node):
         imu_msg.header.frame_id = "base_link"
         
         angle_radian = [data_dict['angle_degree'][i] * math.pi / 180 for i in range(3)]
-        qua = Quaternion.from_euler(angle_radian, axes = ['x', 'y', 'z']) 
+        qua = Quaternion.from_euler(angle_radian[::-1], axes = ['z', 'y', 'x']) 
 
         imu_msg.orientation.x = qua.x
         imu_msg.orientation.y = qua.y
