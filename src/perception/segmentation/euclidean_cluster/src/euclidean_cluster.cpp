@@ -376,15 +376,116 @@ BoundingBoxArray compute_bounding_boxes(
       // remove the bounding box if it does not satisfy the specified size
       if (size_filter) {
         BoundingBox & box = boxes.boxes.back();
+        // remove too small box
         bool erase_box = false;
-        if (box.size.x > filter_config.max_filter_x() ||
-          box.size.y > filter_config.max_filter_y() ||
-          box.size.x < filter_config.min_filter_x() ||
+        if (box.size.x < filter_config.min_filter_x() ||
           box.size.y < filter_config.min_filter_y() ) {erase_box = true;}
         if (compute_height &&
-          (box.size.z > filter_config.max_filter_z() ||
-          box.size.z < filter_config.min_filter_z()) ) {erase_box = true;}
+          (box.size.z < filter_config.min_filter_z()) ) {erase_box = true;}
         if (erase_box) {boxes.boxes.pop_back();}
+        else{
+          // truncat too large box
+          if (box.size.x > filter_config.max_filter_x() ||
+            box.size.y > filter_config.max_filter_y())
+          {
+            boxes.boxes.pop_back();
+            // first split box corners
+            BoundingBox box1, box2;
+            decltype(BoundingBox::corners) corners1, corners2;
+            if (box.size.x > filter_config.max_filter_x())
+            {
+              float32_t max_x = filter_config.max_filter_x()-static_cast<float32_t>(0.01);
+              corners1[0] = box.corners[0];
+              corners1[3] = box.corners[3];
+              corners1[1].z = box.corners[1].z;
+              corners1[2].z = box.corners[2].z;
+              float32_t x_offset = (box.corners[1].x - box.corners[0].x) * 
+                                max_x / box.size.x;
+              float32_t y_offset = (box.corners[1].y - box.corners[0].y) * 
+                                max_x / box.size.x;
+              corners1[1].x = box.corners[0].x + x_offset;
+              corners1[1].y = box.corners[0].y + y_offset;
+
+              corners1[2].x = box.corners[3].x + x_offset;
+              corners1[2].y = box.corners[3].y + y_offset;
+
+              corners2[0] = corners1[1];
+              corners2[1] = box.corners[1];
+              corners2[2] = box.corners[2];
+              corners2[3] = corners1[2];
+
+            }
+            else if (box.size.y > filter_config.max_filter_y())
+            {
+              float32_t max_y = filter_config.max_filter_y()-static_cast<float32_t>(0.01);
+              corners1[0] = box.corners[0];
+              corners1[1] = box.corners[1];
+              corners1[2].z = box.corners[2].z;
+              corners1[3].z = box.corners[3].z;
+              float32_t x_offset = (box.corners[2].x - box.corners[1].x) * 
+                                max_y / box.size.y;
+              float32_t y_offset = (box.corners[2].y - box.corners[1].y) * 
+                                max_y / box.size.y;
+              corners1[2].x = box.corners[1].x + x_offset;
+              corners1[2].y = box.corners[1].y + y_offset;
+
+              corners1[3].x = box.corners[0].x + x_offset;
+              corners1[3].y = box.corners[0].y + y_offset;
+
+              corners2[0] = corners1[3];
+              corners2[1] = corners1[2];
+              corners2[2] = box.corners[2];
+              corners2[3] = box.corners[3];
+
+            }
+            // build box1, box2
+            autoware::common::geometry::bounding_box::details::finalize_box(corners1, box1);
+            autoware::common::geometry::bounding_box::details::size_2d(corners1, box1.size);
+            autoware::common::geometry::bounding_box::details::finalize_box(corners2, box2);
+            autoware::common::geometry::bounding_box::details::size_2d(corners2, box2.size);
+
+            // change cluster result, split cluster of cls_id into two clusters
+            std::vector<autoware_auto_perception_msgs::msg::PointXYZIF> points1;
+            std::vector<autoware_auto_perception_msgs::msg::PointXYZIF> points2;
+            for (auto it = iter_pair.first; it != iter_pair.second; ++it) {
+              float32_t x = (*it).x, y = (*it).y;
+              float32_t x_vec = x - box1.centroid.x, y_vec = y - box1.centroid.y;
+              Eigen::Vector3f vec(x_vec,y_vec,0.0);
+              Eigen::Quaternionf quat(box1.orientation.w,
+                                      box1.orientation.x,
+                                      box1.orientation.y,
+                                      box1.orientation.z);
+              vec = quat.inverse() * vec;
+              bool is_in_box1 = false;
+              if (vec.x()>=-box1.size.x/2&&
+                  vec.x()<=box1.size.x/2&&
+                  vec.y()>=-box1.size.y/2&&
+                  vec.y()<=box1.size.y/2) is_in_box1 = true;
+              if (is_in_box1) points1.push_back(*it);
+              else points2.push_back(*it);
+            }
+            uint32_t num_points_1 = static_cast<uint32_t>(points1.size());
+            uint32_t begin_offset = static_cast<uint32_t>(iter_pair.first - clusters.points.begin());
+            uint32_t end_offset = static_cast<uint32_t>(iter_pair.second - clusters.points.begin());
+            for (auto i = begin_offset; i<end_offset;i++)
+            {
+              if (i<begin_offset+num_points_1) clusters.points[i] = points1[i-begin_offset];
+              else clusters.points[i] = points2[i-begin_offset-num_points_1];
+            }
+            clusters.cluster_boundary.insert(
+                    clusters.cluster_boundary.begin()+cls_id+1, 
+                    begin_offset+num_points_1);
+            auto new_box1 = common::geometry::bounding_box::lfit_bounding_box_2d(
+                clusters.points.begin()+begin_offset,
+                clusters.points.begin()+begin_offset+num_points_1);
+            auto new_box2 = common::geometry::bounding_box::lfit_bounding_box_2d(
+                clusters.points.begin()+begin_offset+num_points_1,
+                clusters.points.begin()+end_offset);
+            boxes.boxes.push_back(new_box1);
+            boxes.boxes.push_back(new_box2);
+            cls_id+=1;
+          }
+        }
       }
     } catch (const std::exception & e) {
       std::cerr << e.what() << std::endl;

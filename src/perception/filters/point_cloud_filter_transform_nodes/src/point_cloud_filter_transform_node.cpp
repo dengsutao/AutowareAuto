@@ -82,6 +82,7 @@ PointCloud2FilterTransformNode::PointCloud2FilterTransformNode(
       std::bind(
         &PointCloud2FilterTransformNode::process_filtered_transformed_message, this, _1))},
   m_pub_ptr{create_publisher<PointCloud2>("points_filtered", rclcpp::QoS{10})},
+  tf_publisher_{std::make_shared<tf2_ros::StaticTransformBroadcaster>(this)},
   m_expected_num_publishers{
     static_cast<size_t>(declare_parameter("expected_num_publishers").get<int32_t>())},
   m_expected_num_subscribers{
@@ -126,7 +127,7 @@ PointCloud2FilterTransformNode::PointCloud2FilterTransformNode(
     RCLCPP_WARN(get_logger(), "Using transform from file.");
     m_static_transformer = std::make_unique<StaticTransformer>(
       get_transform(
-        m_input_frame_id, m_output_frame_id,
+        m_input_frame_id, "axis",
         quat_x_param.as_double(),
         quat_y_param.as_double(),
         quat_z_param.as_double(),
@@ -156,7 +157,7 @@ PointCloud2FilterTransformNode::PointCloud2FilterTransformNode(
   }
   m_imu_transformer = std::make_unique<StaticTransformer>(
       get_transform(
-        "imu", m_output_frame_id,
+        "axis", m_output_frame_id,
         0.0,
         0.0,
         0.0,
@@ -164,6 +165,11 @@ PointCloud2FilterTransformNode::PointCloud2FilterTransformNode(
         0.0,
         0.0,
         0.0).transform);
+  TransformStamped ts;
+  ts.header.stamp = get_clock()->now();
+  ts.header.frame_id = "base_link";
+  ts.child_frame_id = "axis";
+  tf_publisher_->sendTransform(ts);
   using autoware::common::types::PointXYZI;
   CloudModifier{
     m_filtered_transformed_msg, m_output_frame_id}.resize(m_pcl_size);
@@ -201,17 +207,6 @@ const PointCloud2 & PointCloud2FilterTransformNode::filter_and_transform(const P
 
     if (point_not_filtered(pt)) {
       auto transformed_point = transform_point(pt);
-      // if (!flag){
-      //   RCLCPP_INFO(get_logger(), "pt:"+std::to_string(pt.x)+","
-      //                           +std::to_string(pt.y)+","
-      //                           +std::to_string(pt.z));
-      //   RCLCPP_INFO(get_logger(), "transformed_point:"+std::to_string(transformed_point.x)+","
-      //                           +std::to_string(transformed_point.y)+","
-      //                           +std::to_string(transformed_point.z));
-      //   flag = true;
-      // }
-      
-      // auto transformed_point = pt;
       transformed_point = transform_point_imu(transformed_point);
       transformed_point.intensity = pt.intensity;
       modifier.push_back(transformed_point);
@@ -249,7 +244,7 @@ PointCloud2FilterTransformNode::process_imu_message(
                                                       0.0,
                                                       0.0,
                                                       static_cast<float>(-pow(0.5,0.5))};
-  // imu到大地坐标系，先根据imu读数旋转，然后imu的wsu坐标系转大地坐标系nwu
+  // // imu到大地坐标系，先根据imu读数旋转，然后imu的wsu坐标系转大地坐标系nwu
   Eigen::Quaternionf imu_quat_wsu = Eigen::Quaternionf{static_cast<float>(msg->orientation.w),
                                                       static_cast<float>(msg->orientation.x),
                                                       static_cast<float>(msg->orientation.y),
@@ -260,39 +255,48 @@ PointCloud2FilterTransformNode::process_imu_message(
                                                       static_cast<float>(pow(0.5,0.5))};
   Eigen::Quaternionf imu_quat = quat_wsu2nwu * imu_quat_wsu * quat_nwu2wsu;
 
-  // 以下为获取欧拉角,并修正eulerangles的x默认必须是[0,pi]的问题
-  // eulerAngles()得到的欧拉角,x范围限制在了[0,pi],即如果小车向左倾斜0.1rad,x值不是-0.1,而是pi-0.1
-  // 在这种情况下,eulerAngles()的y与实际y0的关系为y0=pi-y;z0=pi+z;
-  // 注意即使进行以下转换后eulerangles1与eulerangles对应的四元数是一样的,只是两者xyz的数值不同而已.
-  auto eulerangles = imu_quat.toRotationMatrix().eulerAngles(0,1,2);
-  Eigen::Vector3f eulerangles1{eulerangles.x(),eulerangles.y(),eulerangles.z()};
-  float pi = static_cast<float>(M_PI);
-  if (eulerangles.x()>pi/2)
-  {
-    eulerangles1.x() = eulerangles.x() - pi;
+  // // 以下为获取欧拉角,并修正eulerangles的x默认必须是[0,pi]的问题
+  // // eulerAngles()得到的欧拉角,x范围限制在了[0,pi],即如果小车向左倾斜0.1rad,x值不是-0.1,而是pi-0.1
+  // // 在这种情况下,eulerAngles()的y与实际y0的关系为y0=pi-y;z0=pi+z;
+  // // 注意即使进行以下转换后eulerangles1与eulerangles对应的四元数是一样的,只是两者xyz的数值不同而已.
+  // auto eulerangles = imu_quat.toRotationMatrix().eulerAngles(0,1,2);
+  // Eigen::Vector3f eulerangles1{eulerangles.x(),eulerangles.y(),eulerangles.z()};
+  // float pi = static_cast<float>(M_PI);
+  // if (eulerangles.x()>pi/2)
+  // {
+  //   eulerangles1.x() = eulerangles.x() - pi;
 
-    auto y = pi - eulerangles.y();
-    y = fmod(y + pi, 2 * pi) - pi;
-    eulerangles1.y() = y;
+  //   auto y = pi - eulerangles.y();
+  //   y = fmod(y + pi, 2 * pi) - pi;
+  //   eulerangles1.y() = y;
     
-    auto z = pi + eulerangles.z();
-    z = fmod(z + pi, 2 * pi) - pi;
-    eulerangles1.z() = z;
-  }
-  // RCLCPP_INFO(get_logger(), "imu x,y="+std::to_string(eulerangles1.x()*180/pi)+","+std::to_string(eulerangles1.y()*180/pi));
-  Eigen::Quaternionf imu_quat1 = Eigen::AngleAxisf(eulerangles1.x(),Eigen::Vector3f::UnitX()) *
-                                    Eigen::AngleAxisf(eulerangles1.y(),Eigen::Vector3f::UnitY()) *
-                                    Eigen::AngleAxisf(0.0,Eigen::Vector3f::UnitZ());
+  //   auto z = pi + eulerangles.z();
+  //   z = fmod(z + pi, 2 * pi) - pi;
+  //   eulerangles1.z() = z;
+  // }
+  // // RCLCPP_INFO(get_logger(), "imu x,y="+std::to_string(eulerangles1.x()*180/pi)+","+std::to_string(eulerangles1.y()*180/pi));
+  // Eigen::Quaternionf imu_quat1 = Eigen::AngleAxisf(eulerangles1.x(),Eigen::Vector3f::UnitX()) *
+  //                                   Eigen::AngleAxisf(eulerangles1.y(),Eigen::Vector3f::UnitY()) *
+  //                                   Eigen::AngleAxisf(eulerangles1.z(),Eigen::Vector3f::UnitZ());
   m_imu_transformer = std::make_unique<StaticTransformer>(
       get_transform(
-        "imu", m_output_frame_id, // 这一行不重要，用不到
-        imu_quat1.x(),
-        imu_quat1.y(),
-        imu_quat1.z(),
-        imu_quat1.w(),
+        "axis", m_output_frame_id, 
+        imu_quat.x(),
+        imu_quat.y(),
+        imu_quat.z(),
+        imu_quat.w(),
         0.0,
         0.0,
         0.0).transform);
+  TransformStamped ts;
+  ts.header.stamp = msg->header.stamp;
+  ts.header.frame_id = "base_link";
+  ts.child_frame_id = "axis";
+  ts.transform.rotation.w = imu_quat.w();
+  ts.transform.rotation.x = imu_quat.x();
+  ts.transform.rotation.y = imu_quat.y();
+  ts.transform.rotation.z = imu_quat.z();
+  tf_publisher_->sendTransform(ts);
 }
 
 }  // namespace point_cloud_filter_transform_nodes
