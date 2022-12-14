@@ -92,26 +92,22 @@ IMUData eskf::convert_data(const sensor_msgs::msg::Imu::SharedPtr imu_msg)
     IMUData imu_data;
     imu_data.time = (double)imu_msg->header.stamp.sec + (double)imu_msg->header.stamp.nanosec * 1.0e-9;
 
-    // imu坐标系没有改动情况下
-    // 加速度， 读数坐标系：END，转ENU
     imu_data.linear_accel.x() = imu_msg->linear_acceleration.x*gravity;
     imu_data.linear_accel.y() = imu_msg->linear_acceleration.y*gravity;
-    imu_data.linear_accel.z() = -imu_msg->linear_acceleration.z*gravity;
+    imu_data.linear_accel.z() = imu_msg->linear_acceleration.z*gravity;
 
-    // 角速度， 读数坐标系：WSU, 转ENU
-    imu_data.angle_velocity.x() = -imu_msg->angular_velocity.x;
-    imu_data.angle_velocity.y() = -imu_msg->angular_velocity.y;
+    imu_data.angle_velocity.x() = imu_msg->angular_velocity.x;
+    imu_data.angle_velocity.y() = imu_msg->angular_velocity.y;
     imu_data.angle_velocity.z() = imu_msg->angular_velocity.z;
 
-    // 角度， 读数坐标系：WSU, 转ENU
     imu_data.quat = Eigen::Quaterniond(imu_msg->orientation.w, 
                                         imu_msg->orientation.x, 
                                         imu_msg->orientation.y, 
                                         imu_msg->orientation.z);
-    Eigen::Quaterniond wsu2enu_quat = Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitZ())*
-                                    Eigen::AngleAxisd(0.0, Eigen::Vector3d::UnitY())*
-                                    Eigen::AngleAxisd(0.0, Eigen::Vector3d::UnitX());
-    imu_data.quat = imu_data.quat * wsu2enu_quat;
+    // Eigen::Quaterniond wsu2enu_quat = Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitZ())*
+    //                                 Eigen::AngleAxisd(0.0, Eigen::Vector3d::UnitY())*
+    //                                 Eigen::AngleAxisd(0.0, Eigen::Vector3d::UnitX());
+    // imu_data.quat = imu_data.quat * wsu2enu_quat;
     imu_data.angle = quat2eular(imu_data.quat);
 
     return imu_data;
@@ -136,13 +132,19 @@ ODOMData eskf::convert_data(const nav_msgs::msg::Odometry::SharedPtr odom_msg)
     // odom的z轴角度只是相对值，需要加上初始的imu yaw角。注意保证发送odom数据在初始化imu数据之后！！
     double eular_angle_z = init_angle_.z();
     odom_data.pose.z() += eular_angle_z / kDegree2Radian; // 后边暂时用不到
+    odom_data.pose.z() = fmod(odom_data.pose.z()+180.0,360.0) - 180.0;
+    // RCLCPP_INFO(get_logger(), "before\nodom_data.pose_x:"+std::to_string(odom_data.pose.x())+
+    //                             "\nodom_data.pose_y:"+std::to_string(odom_data.pose.y())+
+    //                             "\nodom_data.pose_z:"+std::to_string(odom_data.pose.z()));
     // 由于odom只能计算enu坐标系下的相对位移
     // 默认初始yaw角为0，这里要加上初始yaw角的变换，才是odom在大地enu坐标系下的位置和速度
-    odom_data.pose.x()+=odom_data.pose.x() * cos(eular_angle_z) - odom_data.pose.y() * sin(eular_angle_z); 
-    odom_data.pose.y()+=odom_data.pose.x() * sin(eular_angle_z) + odom_data.pose.y() * cos(eular_angle_z); 
-    odom_data.vel.x()+=odom_data.vel.x() * cos(eular_angle_z) - odom_data.vel.y() * sin(eular_angle_z); 
-    odom_data.vel.y()+=odom_data.vel.x() * sin(eular_angle_z) + odom_data.vel.y() * cos(eular_angle_z); 
-
+    odom_data.pose.x()=odom_data.pose.x() * cos(eular_angle_z) - odom_data.pose.y() * sin(eular_angle_z); 
+    odom_data.pose.y()=odom_data.pose.x() * sin(eular_angle_z) + odom_data.pose.y() * cos(eular_angle_z); 
+    odom_data.vel.x()=odom_data.vel.x() * cos(eular_angle_z) - odom_data.vel.y() * sin(eular_angle_z); 
+    odom_data.vel.y()=odom_data.vel.x() * sin(eular_angle_z) + odom_data.vel.y() * cos(eular_angle_z); 
+    // RCLCPP_INFO(get_logger(), "after\nodom_data.pose_x:"+std::to_string(odom_data.pose.x())+
+    //                             "\nodom_data.pose_y:"+std::to_string(odom_data.pose.y())+
+    //                             "\nodom_data.pose_z:"+std::to_string(odom_data.pose.z()));
     return odom_data;
 }
 
@@ -224,6 +226,10 @@ void eskf::imu_callback(const sensor_msgs::msg::Imu::SharedPtr imu_msg)
     curr_imu_data_ = convert_data(imu_msg);
     imu_data_buff_.push_back(curr_imu_data_);
 
+    // RCLCPP_INFO(get_logger(), "\ncur_angle_x:"+std::to_string(curr_imu_data_.angle.x()/M_PI*180)+
+    //                             "\ncur_angle_y:"+std::to_string(curr_imu_data_.angle.y()/M_PI*180)+
+    //                             "\ncur_angle_z:"+std::to_string(curr_imu_data_.angle.z()/M_PI*180));
+
     // 不能单纯依靠imu进行路径计算，目前暂定3种传感器都接受到数据后，可以开始录制数据。
     // 但不要求gps数据和odom数据都valid。
     if ((init_flag_ & ALL_RECV_FLAG)!=ALL_RECV_FLAG) return;
@@ -236,6 +242,7 @@ void eskf::imu_callback(const sensor_msgs::msg::Imu::SharedPtr imu_msg)
         // 设定初始姿态，通过angle文件第一条数据读取
         std::cout<<"initial velocity:"<<init_velocity_.transpose()<<std::endl;
         std::cout<<"initial angle:"<<init_angle_.transpose()/kDegree2Radian<<std::endl;
+        RCLCPP_INFO(get_logger(), "init_angle_z:"+std::to_string(init_angle_.z()/M_PI*180));
         Eigen::Quaterniond Q = Eigen::AngleAxisd(init_angle_[2], Eigen::Vector3d::UnitZ()) *
                             Eigen::AngleAxisd(init_angle_[1], Eigen::Vector3d::UnitY()) *
                             Eigen::AngleAxisd(init_angle_[0], Eigen::Vector3d::UnitX());
@@ -620,12 +627,12 @@ Eigen::Vector3d eskf::quat2eular(Eigen::Quaterniond quat)
     {
         out.x() = angle_xyz.x()>0? (angle_xyz.x()-M_PI):(angle_xyz.x()+M_PI);
         out.y() = angle_xyz.y()>0? (M_PI-angle_xyz.y()):(-M_PI-angle_xyz.y());
-        out.z() = angle_xyz.z();
+        out.z() = angle_xyz.z()-M_PI;
     }
     else{
         out.x() = angle_xyz.x();
         out.y() = angle_xyz.y();
-        out.z() = angle_xyz.z()-M_PI;
+        out.z() = angle_xyz.z();
     }
     return out;
 }
@@ -981,7 +988,7 @@ eskf::eskf(std::string name): Node(name)
     init_flag_=0;
     
     // init save dir, file_name
-    save_dir = "/home/dengsutao/code/data_flow_ros2/src/eskf/records";
+    save_dir = "/home/dengsutao/AutowareAuto/src/drivers/eskf/records";
     save_file_name = std::to_string((int)(std::chrono::system_clock::now().time_since_epoch().count() / 1e9))+".txt";
     // 复现时读取的录制文件
     declare_parameter<std::string>("record_in","");

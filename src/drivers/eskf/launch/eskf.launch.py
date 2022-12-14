@@ -16,7 +16,6 @@ def generate_launch_description():
         package='wheel_imu',
         executable='wheel_imu_node',
         parameters=[{
-            'mode': 1,
             'debug': False,
          }])
     eskf_runner = launch_ros.actions.Node(
@@ -24,10 +23,10 @@ def generate_launch_description():
         executable='eskf_node',
         parameters=[{
             'mode': 1,
-            'debug': False,
+            'debug': True,
          }])
     return launch.LaunchDescription([
-        #imu_gps_runner,
-        #wheel_imu_runner,
+        imu_gps_runner,
+        wheel_imu_runner,
         eskf_runner
         ])

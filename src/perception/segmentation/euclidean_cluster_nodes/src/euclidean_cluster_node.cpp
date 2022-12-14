@@ -229,10 +229,10 @@ void EuclideanClusterNode::handle_clusters(
 
   BoundingBoxArray boxes;
   if (m_use_lfit) {
-    // boxes = euclidean_cluster::details::compute_bounding_boxes(
-    //   clusters_out, BboxMethod::LFit, m_use_z, true, m_cluster_alg.get_filter_config());
     boxes = euclidean_cluster::details::compute_bounding_boxes(
-      clusters_out, BboxMethod::LFit, m_use_z);
+      clusters_out, BboxMethod::LFit, m_use_z, true, m_cluster_alg.get_filter_config());
+    // boxes = euclidean_cluster::details::compute_bounding_boxes(
+    //   clusters_out, BboxMethod::LFit, m_use_z);
   } else {
     boxes = euclidean_cluster::details::compute_bounding_boxes(
       clusters_out, BboxMethod::Eigenbox,

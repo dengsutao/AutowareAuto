@@ -120,6 +120,9 @@ def split_data(inputdata):
     elif inputdata[0] == 0x55 and inputdata[1] == 0x51:
         print('加速度')
         linear_acceleration = get_acc(inputdata[2:10])
+        linear_acceleration[0] = -linear_acceleration[0]
+        linear_acceleration[1] = -linear_acceleration[1]
+        linear_acceleration[2] = -linear_acceleration[2]
         return {'linear_acceleration':linear_acceleration}
     elif inputdata[0] == 0x55 and inputdata[1] == 0x52:
         print('角速度')
@@ -128,6 +131,7 @@ def split_data(inputdata):
     elif inputdata[0] == 0x55 and inputdata[1] == 0x53:
         print('角度')
         angle_degree = get_angle(inputdata[2:10])
+        angle_degree[2] = (angle_degree[2] + 90.0 + 180.0) % 360.0 - 180.0
         return {"angle_degree":angle_degree}
     elif inputdata[0] == 0x55 and inputdata[1] == 0x54:
         print('磁场')

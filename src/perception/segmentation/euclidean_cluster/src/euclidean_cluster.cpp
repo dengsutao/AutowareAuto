@@ -354,138 +354,32 @@ BoundingBoxArray compute_bounding_boxes(
       if (iter_pair.first == iter_pair.second) {
         continue;
       }
-
+      BoundingBox box;
       switch (method) {
-        case BboxMethod::Eigenbox: boxes.boxes.push_back(
-            common::geometry::bounding_box::eigenbox_2d(
+        case BboxMethod::Eigenbox: 
+            box = common::geometry::bounding_box::eigenbox_2d(
               iter_pair.first,
-              iter_pair.second));
+              iter_pair.second);
           break;
-        case BboxMethod::LFit:     boxes.boxes.push_back(
-            common::geometry::bounding_box::lfit_bounding_box_2d(
+        case BboxMethod::LFit:     
+            box = common::geometry::bounding_box::lfit_bounding_box_2d(
               iter_pair.first,
-              iter_pair.second));
+              iter_pair.second);
           break;
       }
-
       if (compute_height) {
         common::geometry::bounding_box::compute_height(
-          iter_pair.first, iter_pair.second, boxes.boxes.back());
+          iter_pair.first, iter_pair.second, box);
       }
 
-      // remove the bounding box if it does not satisfy the specified size
+      // filter the bounding box if it does not satisfy the specified size
       if (size_filter) {
-        BoundingBox & box = boxes.boxes.back();
-        // remove too small box
-        bool erase_box = false;
-        if (box.size.x < filter_config.min_filter_x() ||
-          box.size.y < filter_config.min_filter_y() ) {erase_box = true;}
-        if (compute_height &&
-          (box.size.z < filter_config.min_filter_z()) ) {erase_box = true;}
-        if (erase_box) {boxes.boxes.pop_back();}
-        else{
-          // truncat too large box
-          if (box.size.x > filter_config.max_filter_x() ||
-            box.size.y > filter_config.max_filter_y())
-          {
-            boxes.boxes.pop_back();
-            // first split box corners
-            BoundingBox box1, box2;
-            decltype(BoundingBox::corners) corners1, corners2;
-            if (box.size.x > filter_config.max_filter_x())
-            {
-              float32_t max_x = filter_config.max_filter_x()-static_cast<float32_t>(0.01);
-              corners1[0] = box.corners[0];
-              corners1[3] = box.corners[3];
-              corners1[1].z = box.corners[1].z;
-              corners1[2].z = box.corners[2].z;
-              float32_t x_offset = (box.corners[1].x - box.corners[0].x) * 
-                                max_x / box.size.x;
-              float32_t y_offset = (box.corners[1].y - box.corners[0].y) * 
-                                max_x / box.size.x;
-              corners1[1].x = box.corners[0].x + x_offset;
-              corners1[1].y = box.corners[0].y + y_offset;
-
-              corners1[2].x = box.corners[3].x + x_offset;
-              corners1[2].y = box.corners[3].y + y_offset;
-
-              corners2[0] = corners1[1];
-              corners2[1] = box.corners[1];
-              corners2[2] = box.corners[2];
-              corners2[3] = corners1[2];
-
-            }
-            else if (box.size.y > filter_config.max_filter_y())
-            {
-              float32_t max_y = filter_config.max_filter_y()-static_cast<float32_t>(0.01);
-              corners1[0] = box.corners[0];
-              corners1[1] = box.corners[1];
-              corners1[2].z = box.corners[2].z;
-              corners1[3].z = box.corners[3].z;
-              float32_t x_offset = (box.corners[2].x - box.corners[1].x) * 
-                                max_y / box.size.y;
-              float32_t y_offset = (box.corners[2].y - box.corners[1].y) * 
-                                max_y / box.size.y;
-              corners1[2].x = box.corners[1].x + x_offset;
-              corners1[2].y = box.corners[1].y + y_offset;
-
-              corners1[3].x = box.corners[0].x + x_offset;
-              corners1[3].y = box.corners[0].y + y_offset;
-
-              corners2[0] = corners1[3];
-              corners2[1] = corners1[2];
-              corners2[2] = box.corners[2];
-              corners2[3] = box.corners[3];
-
-            }
-            // build box1, box2
-            autoware::common::geometry::bounding_box::details::finalize_box(corners1, box1);
-            autoware::common::geometry::bounding_box::details::size_2d(corners1, box1.size);
-            autoware::common::geometry::bounding_box::details::finalize_box(corners2, box2);
-            autoware::common::geometry::bounding_box::details::size_2d(corners2, box2.size);
-
-            // change cluster result, split cluster of cls_id into two clusters
-            std::vector<autoware_auto_perception_msgs::msg::PointXYZIF> points1;
-            std::vector<autoware_auto_perception_msgs::msg::PointXYZIF> points2;
-            for (auto it = iter_pair.first; it != iter_pair.second; ++it) {
-              float32_t x = (*it).x, y = (*it).y;
-              float32_t x_vec = x - box1.centroid.x, y_vec = y - box1.centroid.y;
-              Eigen::Vector3f vec(x_vec,y_vec,0.0);
-              Eigen::Quaternionf quat(box1.orientation.w,
-                                      box1.orientation.x,
-                                      box1.orientation.y,
-                                      box1.orientation.z);
-              vec = quat.inverse() * vec;
-              bool is_in_box1 = false;
-              if (vec.x()>=-box1.size.x/2&&
-                  vec.x()<=box1.size.x/2&&
-                  vec.y()>=-box1.size.y/2&&
-                  vec.y()<=box1.size.y/2) is_in_box1 = true;
-              if (is_in_box1) points1.push_back(*it);
-              else points2.push_back(*it);
-            }
-            uint32_t num_points_1 = static_cast<uint32_t>(points1.size());
-            uint32_t begin_offset = static_cast<uint32_t>(iter_pair.first - clusters.points.begin());
-            uint32_t end_offset = static_cast<uint32_t>(iter_pair.second - clusters.points.begin());
-            for (auto i = begin_offset; i<end_offset;i++)
-            {
-              if (i<begin_offset+num_points_1) clusters.points[i] = points1[i-begin_offset];
-              else clusters.points[i] = points2[i-begin_offset-num_points_1];
-            }
-            clusters.cluster_boundary.insert(
-                    clusters.cluster_boundary.begin()+cls_id+1, 
-                    begin_offset+num_points_1);
-            auto new_box1 = common::geometry::bounding_box::lfit_bounding_box_2d(
-                clusters.points.begin()+begin_offset,
-                clusters.points.begin()+begin_offset+num_points_1);
-            auto new_box2 = common::geometry::bounding_box::lfit_bounding_box_2d(
-                clusters.points.begin()+begin_offset+num_points_1,
-                clusters.points.begin()+end_offset);
-            boxes.boxes.push_back(new_box1);
-            boxes.boxes.push_back(new_box2);
-            cls_id+=1;
-          }
-        }
+        BoundingBox & box_to_filter = box;
+        uint32_t num_cls;
+        auto filtered_boxes = filter_boxes(box_to_filter,cls_id,num_cls,iter_pair,clusters,method,compute_height,filter_config);
+        if (filtered_boxes.boxes.size()>0)
+          boxes.boxes.insert(boxes.boxes.end(), filtered_boxes.boxes.begin(), filtered_boxes.boxes.end());
+        cls_id+=num_cls-1U;
       }
     } catch (const std::exception & e) {
       std::cerr << e.what() << std::endl;
@@ -493,6 +387,210 @@ BoundingBoxArray compute_bounding_boxes(
   }
   return boxes;
 }
+
+BoundingBoxArray filter_boxes(
+  BoundingBox & box, const uint32_t cls_id, uint32_t & num_cls,
+  const std::pair<autoware_auto_perception_msgs::msg::PointClusters::_points_type::iterator,
+  autoware_auto_perception_msgs::msg::PointClusters::_points_type::iterator> & iter_pair,
+  Clusters & clusters, const BboxMethod method, const bool compute_height,
+  const FilterConfig & filter_config, const float32_t eps)
+{
+  num_cls = 1U;
+  BoundingBoxArray new_boxes;
+  // remove too small box
+  bool erase_box = false;
+  if (box.size.x < filter_config.min_filter_x() ||
+    box.size.y < filter_config.min_filter_y() ) {erase_box = true;}
+  if (compute_height &&
+    (box.size.z < filter_config.min_filter_z()) ) {erase_box = true;}
+  if (erase_box) return new_boxes;
+  
+  // large box splitting
+  if (box.size.x > filter_config.max_filter_x() ||
+    box.size.y > filter_config.max_filter_y())
+  {
+    // first split box corners
+    BoundingBox box1, box2;
+    decltype(BoundingBox::corners) corners1, corners2;
+    if (box.size.x > filter_config.max_filter_x())
+    {
+      float32_t max_x = filter_config.max_filter_x()-eps;
+      corners1[0] = box.corners[0];
+      corners1[3] = box.corners[3];
+      corners1[1].z = box.corners[1].z;
+      corners1[2].z = box.corners[2].z;
+      float32_t x_offset = (box.corners[1].x - box.corners[0].x) * 
+                        max_x / box.size.x;
+      float32_t y_offset = (box.corners[1].y - box.corners[0].y) * 
+                        max_x / box.size.x;
+      corners1[1].x = box.corners[0].x + x_offset;
+      corners1[1].y = box.corners[0].y + y_offset;
+
+      corners1[2].x = box.corners[3].x + x_offset;
+      corners1[2].y = box.corners[3].y + y_offset;
+
+      corners2[0] = corners1[1];
+      corners2[1] = box.corners[1];
+      corners2[2] = box.corners[2];
+      corners2[3] = corners1[2];
+
+    }
+    else if (box.size.y > filter_config.max_filter_y())
+    {
+      float32_t max_y = filter_config.max_filter_y()-eps;
+      corners1[0] = box.corners[0];
+      corners1[1] = box.corners[1];
+      corners1[2].z = box.corners[2].z;
+      corners1[3].z = box.corners[3].z;
+      float32_t x_offset = (box.corners[2].x - box.corners[1].x) * 
+                        max_y / box.size.y;
+      float32_t y_offset = (box.corners[2].y - box.corners[1].y) * 
+                        max_y / box.size.y;
+      corners1[2].x = box.corners[1].x + x_offset;
+      corners1[2].y = box.corners[1].y + y_offset;
+
+      corners1[3].x = box.corners[0].x + x_offset;
+      corners1[3].y = box.corners[0].y + y_offset;
+
+      corners2[0] = corners1[3];
+      corners2[1] = corners1[2];
+      corners2[2] = box.corners[2];
+      corners2[3] = box.corners[3];
+
+    }
+
+    // build box1, box2
+    autoware::common::geometry::bounding_box::details::finalize_box(corners1, box1);
+    autoware::common::geometry::bounding_box::details::size_2d(corners1, box1.size);
+    autoware::common::geometry::bounding_box::details::finalize_box(corners2, box2);
+    autoware::common::geometry::bounding_box::details::size_2d(corners2, box2.size);
+    if (compute_height)
+    {
+      box1.centroid.z = box.centroid.z;
+      for (auto & corner : box1.corners) {
+        corner.z = box.centroid.z;
+      }
+      box1.size.z = box.size.z;
+
+      box2.centroid.z = box.centroid.z;
+      for (auto & corner : box2.corners) {
+        corner.z = box.centroid.z;
+      }
+      box2.size.z = box.size.z;
+    }
+
+    // calculate which point in box1, else in box2
+    std::vector<autoware_auto_perception_msgs::msg::PointXYZIF> points1;
+    std::vector<autoware_auto_perception_msgs::msg::PointXYZIF> points2;
+    for (auto it = iter_pair.first; it != iter_pair.second; ++it) {
+      float32_t x = (*it).x, y = (*it).y;
+      float32_t x_vec1 = x - box1.centroid.x, y_vec1 = y - box1.centroid.y;
+      float32_t x_vec2 = x - box2.centroid.x, y_vec2 = y - box2.centroid.y;
+      Eigen::Vector3f vec1(x_vec1,y_vec1,0.0), vec2(x_vec2,y_vec2,0.0);
+      Eigen::Quaternionf quat(box1.orientation.w,
+                              box1.orientation.x,
+                              box1.orientation.y,
+                              box1.orientation.z);
+      // 将vec进行旋转，旋转到矩形z姿态角为0时的表示(enu)
+      // 此时box.size坐标系为seu，即x方向向下，y方向向右，idx[0,1,2,3]逆时针方向
+      vec1 = quat.inverse() * vec1;
+      vec2 = quat.inverse() * vec2;
+      bool is_in_box1 = false;
+      if (vec1.x()>=-box1.size.y/2-eps/2&&
+          vec1.x()<=box1.size.y/2+eps/2&&
+          vec1.y()>=-box1.size.x/2-eps/2&&
+          vec1.y()<=box1.size.x/2+eps/2) is_in_box1 = true;
+      if (is_in_box1) points1.push_back(*it);
+      else points2.push_back(*it);
+    }
+    uint32_t num_points_1 = static_cast<uint32_t>(points1.size());
+    uint32_t num_points_2 = static_cast<uint32_t>(points2.size());
+    bool is_valid1 = num_points_1>=2U? true:false, is_valid2 = num_points_2>=2U? true:false;
+    uint32_t begin_offset = static_cast<uint32_t>(iter_pair.first - clusters.points.begin());
+    uint32_t end_offset = static_cast<uint32_t>(iter_pair.second - clusters.points.begin());
+    // 拆分clusters为两半
+    for (auto i = begin_offset; i<end_offset;i++)
+    {
+      if (i<begin_offset+num_points_1) clusters.points[i] = points1[i-begin_offset];
+      else clusters.points[i] = points2[i-begin_offset-num_points_1];
+    }
+    clusters.cluster_boundary.insert(
+            clusters.cluster_boundary.begin()+cls_id,
+            begin_offset+num_points_1);
+    // 重新计算box，因为拆分后，两个box不应该还是原来的大小，需要根据点云分布缩紧
+    uint32_t num_cls1=1U, num_cls2=1U;
+    if (is_valid1)
+    {
+      BoundingBox new_box1;
+      switch (method) {
+        case BboxMethod::Eigenbox: 
+            new_box1 = common::geometry::bounding_box::eigenbox_2d(
+              clusters.points.begin()+begin_offset,
+              clusters.points.begin()+begin_offset+num_points_1);
+          break;
+        case BboxMethod::LFit:     
+            new_box1 = common::geometry::bounding_box::lfit_bounding_box_2d(
+              clusters.points.begin()+begin_offset,
+              clusters.points.begin()+begin_offset+num_points_1);
+          break;
+      }
+      if (compute_height) {
+        common::geometry::bounding_box::compute_height(
+          clusters.points.begin()+begin_offset,
+          clusters.points.begin()+begin_offset+num_points_1, new_box1);
+      }
+      // 递归操作，分别重新计算分开的两个box是否需要递归拆分，得到拆分后的boxes
+      // 注意第二个boxes的cls_id应该根据前一个动态计算，因为clusters是动态变化的。
+      const std::pair<autoware_auto_perception_msgs::msg::PointClusters::_points_type::iterator,
+      autoware_auto_perception_msgs::msg::PointClusters::_points_type::iterator>
+      new_iter_pair1 = {clusters.points.begin() + begin_offset, 
+                              clusters.points.begin()+begin_offset+num_points_1};
+      uint32_t cls_id1 = cls_id;
+      BoundingBoxArray new_boxes1 = filter_boxes(new_box1, cls_id1, num_cls1, new_iter_pair1, clusters, method, compute_height, filter_config);
+      if (new_boxes1.boxes.size()>0)
+        new_boxes.boxes.insert(new_boxes.boxes.end(), new_boxes1.boxes.begin(), new_boxes1.boxes.end());
+    }
+    if (is_valid2)
+    {
+      BoundingBox new_box2;
+      switch (method) {
+        case BboxMethod::Eigenbox: 
+            new_box2 = common::geometry::bounding_box::eigenbox_2d(
+              clusters.points.begin()+begin_offset+num_points_1,
+              clusters.points.begin()+end_offset);
+          break;
+        case BboxMethod::LFit:     
+            new_box2 = common::geometry::bounding_box::lfit_bounding_box_2d(
+              clusters.points.begin()+begin_offset+num_points_1,
+              clusters.points.begin()+end_offset);
+          break;
+      }
+      if (compute_height) {
+        common::geometry::bounding_box::compute_height(
+          clusters.points.begin()+begin_offset+num_points_1,
+        clusters.points.begin()+end_offset, new_box2);
+      }
+      // 递归操作，分别重新计算分开的两个box是否需要递归拆分，得到拆分后的boxes
+      // 注意第二个boxes的cls_id应该根据前一个动态计算，因为clusters是动态变化的。
+      const std::pair<autoware_auto_perception_msgs::msg::PointClusters::_points_type::iterator,
+      autoware_auto_perception_msgs::msg::PointClusters::_points_type::iterator>
+      new_iter_pair2 = {clusters.points.begin()+begin_offset+num_points_1,
+                      clusters.points.begin()+end_offset};
+      uint32_t cls_id2 = cls_id + num_cls1;
+      BoundingBoxArray new_boxes2 = filter_boxes(new_box2, cls_id2, num_cls2, new_iter_pair2, clusters, method, compute_height, filter_config);
+      if (new_boxes2.boxes.size()>0)
+        new_boxes.boxes.insert(new_boxes.boxes.end(), new_boxes2.boxes.begin(), new_boxes2.boxes.end());
+    }
+    num_cls = num_cls1 + num_cls2;
+  }
+  else
+  {
+    new_boxes.boxes.push_back(box);
+    num_cls = 1U;
+  }
+  return new_boxes;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 BoundingBoxArray compute_lfit_bounding_boxes(Clusters & clusters, const bool compute_height)
 {

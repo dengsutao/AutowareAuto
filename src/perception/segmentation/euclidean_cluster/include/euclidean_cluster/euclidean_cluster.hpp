@@ -311,6 +311,28 @@ BoundingBoxArray compute_bounding_boxes(
     std::numeric_limits<float>::max(),
     std::numeric_limits<float>::max()});
 
+/// \brief Compute bounding boxes from clusters
+/// \param[in] method Whether to use the eigenboxes or L-Fit algorithm.
+/// \param[in] box box to be filtered.
+/// \param[in] cls_id the original classfication id of these boxes.
+/// \param[in] cls_id_offset offset cls id which used to iter next box.
+/// \param[in] compute_height Compute the height of the bounding box as well.
+/// \param[inout] clusters A set of clusters for which to compute the bounding boxes. Individual
+///                        clusters may get their points shuffled.
+/// \param[in] filter_config The max/min limit of the xyz component of bounding box
+/// \returns Bounding boxes
+EUCLIDEAN_CLUSTER_PUBLIC
+BoundingBoxArray filter_boxes(
+  BoundingBox & box, const uint32_t cls_id, uint32_t & num_cls,
+  const std::pair<autoware_auto_perception_msgs::msg::PointClusters::_points_type::iterator,
+  autoware_auto_perception_msgs::msg::PointClusters::_points_type::iterator> & iter_pair,
+  Clusters & clusters, const BboxMethod method, const bool compute_height,
+  const FilterConfig & filter_config = {0.0F, 0.0F, 0.0F,
+    std::numeric_limits<float>::max(),
+    std::numeric_limits<float>::max(),
+    std::numeric_limits<float>::max()},
+  const float32_t eps=static_cast<float32_t>(0.01));
+
 /// \brief Convert this bounding box to a DetectedObjects message
 /// \param[in] boxes A bounding box array
 /// \returns A DetectedObjects message with the bounding boxes inside
