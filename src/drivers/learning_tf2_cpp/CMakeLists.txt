@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(eskf)
+project(learning_tf2_cpp)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -17,12 +17,47 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-find_package(rclcpp REQUIRED)
-find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
-find_package(Eigen3 REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(eskf REQUIRED)
+
+# add_executable(static_turtle_tf2_broadcaster src/static_turtle_tf2_broadcaster.cpp)
+# ament_target_dependencies(
+#    static_turtle_tf2_broadcaster
+#    geometry_msgs
+#    rclcpp
+#    tf2
+#    tf2_ros
+#    eskf
+# )
+# install(TARGETS
+#    static_turtle_tf2_broadcaster
+#    DESTINATION lib/${PROJECT_NAME})
+
+
+add_executable(turtle_tf2_broadcaster src/turtle_tf2_broadcaster.cpp)
+ament_target_dependencies(
+    turtle_tf2_broadcaster
+    sensor_msgs
+    nav_msgs
+    geometry_msgs
+    rclcpp
+    tf2
+    tf2_ros
+    eskf
+)
+
+install(TARGETS
+    turtle_tf2_broadcaster
+    DESTINATION lib/${PROJECT_NAME})
+
+install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -36,30 +71,3 @@ if(BUILD_TESTING)
 endif()
 
 ament_package()
-
-include_directories(include ${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
-include_directories(include/${PROJECT_NAME})
-include_directories(3rd/GeographicLib/include)
-include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
-
-add_library(DEPS SHARED
-    3rd/GeographicLib/src/LocalCartesian.cpp
-    3rd/GeographicLib/src/Geocentric.cpp
-    3rd/GeographicLib/src/Math.cpp
-)
-
-add_executable(eskf_node src/eskf.cpp)
-target_link_libraries(eskf_node DEPS)
-ament_target_dependencies(eskf_node rclcpp)
-ament_target_dependencies(eskf_node sensor_msgs)
-ament_target_dependencies(eskf_node std_msgs)
-ament_target_dependencies(eskf_node nav_msgs)
-ament_target_dependencies(eskf_node geometry_msgs)
-
-install(TARGETS
-  eskf_node
-  DESTINATION lib/${PROJECT_NAME}
-)
-
-install(DIRECTORY launch
-  DESTINATION share/${PROJECT_NAME})

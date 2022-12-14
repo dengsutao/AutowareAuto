@@ -57,7 +57,7 @@ using std::placeholders::_2;
 
 namespace
 {
-constexpr std::chrono::milliseconds kMaxLidarEgoStateStampDiff{999999999999999999};//rmflag
+constexpr std::chrono::milliseconds kMaxLidarEgoStateStampDiff{1000};//rmflag
 constexpr std::int64_t kDefaultHistoryDepth{20};
 constexpr std::int64_t kDefaultPoseHistoryDepth{100};
 
@@ -179,15 +179,19 @@ MultiObjectTrackerNode::MultiObjectTrackerNode(const rclcpp::NodeOptions & optio
     static_cast<size_t>(declare_parameter("pose_history_depth", kDefaultPoseHistoryDepth));
   m_odom_cache = std::make_unique<OdomCache>();
   m_odom_cache->setCacheSize(static_cast<std::uint32_t>(pose_history_depth));
-  if (m_use_ndt) {
-    m_odom_subscription = create_subscription<OdometryMsg>(
+  // if (m_use_ndt) {
+  //   m_odom_subscription = create_subscription<OdometryMsg>(
+  //     "ego_state", rclcpp::QoS{pose_history_depth},
+  //     std::bind(&MultiObjectTrackerNode::odometry_callback, this, std::placeholders::_1));
+  // } else {
+  //   m_pose_subscription = create_subscription<PoseMsg>(
+  //     "ego_state", rclcpp::QoS{pose_history_depth},
+  //     std::bind(&MultiObjectTrackerNode::pose_callback, this, std::placeholders::_1));
+  // }
+
+  m_odom_subscription = create_subscription<OdometryMsg>(
       "ego_state", rclcpp::QoS{pose_history_depth},
       std::bind(&MultiObjectTrackerNode::odometry_callback, this, std::placeholders::_1));
-  } else {
-    m_pose_subscription = create_subscription<PoseMsg>(
-      "ego_state", rclcpp::QoS{pose_history_depth},
-      std::bind(&MultiObjectTrackerNode::pose_callback, this, std::placeholders::_1));
-  }
 
   const auto use_detected_objects = this->declare_parameter("use_detected_objects", true);
   const auto use_raw_clusters = this->declare_parameter("use_raw_clusters", true);
@@ -311,7 +315,7 @@ MultiObjectTrackerNode::TrackerVariant MultiObjectTrackerNode::init_tracker(
 
 void MultiObjectTrackerNode::clusters_callback(const ClustersMsg::ConstSharedPtr objs)
 {
-  const rclcpp::Time msg_stamp{objs->header.stamp.sec, objs->header.stamp.nanosec};
+  const rclcpp::Time msg_stamp{objs->header.stamp.sec, objs->header.stamp.nanosec};//rmflag
   const auto earliest_time = msg_stamp - kMaxLidarEgoStateStampDiff;
   const auto latest_time = msg_stamp + kMaxLidarEgoStateStampDiff;
   const auto matched_msgs = m_odom_cache->getInterval(earliest_time, latest_time);

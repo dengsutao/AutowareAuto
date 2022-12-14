@@ -74,6 +74,15 @@ def generate_launch_description():
                          "launch/lidar_bounding_boxes_real.launch.py")),
     )
 
+    tf2_odom = Node(
+            package='learning_tf2_cpp',
+            executable='turtle_tf2_broadcaster',
+            name='broadcaster1',
+            parameters=[
+                {'turtlename': '/fused_pose1'}
+            ]
+    )
+
     ndt_state_estimation_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(get_package_share_directory("autoware_demos"),
@@ -153,7 +162,8 @@ def generate_launch_description():
         ],
         remappings=[
             ("detected_objects", "/lidars/lidar_detected_objects"),
-            ("ego_state", "/vehicle/odom_pose"),
+            #("ego_state", "/vehicle/odom_pose"),
+            ("ego_state", "/fused_pose1"),
             ("classified_rois1", "/perception/ground_truth_detections_2d"),
             ("clusters", "/lidars/cluster_points")
         ],
@@ -207,6 +217,7 @@ def generate_launch_description():
     return launch.LaunchDescription([
         use_ndt,
         lidar_detection_launch,
+        tf2_odom,
         ndt_state_estimation_launch,
         vision_detections,
         lgsvl_interface,

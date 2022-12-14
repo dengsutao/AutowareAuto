@@ -205,6 +205,7 @@ public:
 
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr fused_pose_pub;
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr fused_pose_pub1;
+    //rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr fused_pose_pub2;
 
     bool predict();
     bool odom_correct();
