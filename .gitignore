@@ -7,3 +7,4 @@ svlsimulator-linux64-2021.3
 *.pyc
 src/drivers/eskf/records
 rosbag2_*
+src/drivers/eskf/scripts

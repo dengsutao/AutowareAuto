@@ -179,7 +179,7 @@ class IMU_GPS_Node(Node):
         self.declare_parameter("debug", False)
         self.timeout = 0.5
         self.pub_imu = self.create_publisher(Imu, "imu1", 100)
-        self.pub_gps = self.create_publisher(NavSatFix, "gps", 10)
+        # self.pub_gps = self.create_publisher(NavSatFix, "gps", 10)
         self.ser = self.init_serial()
 
     def init_serial(self):
@@ -221,15 +221,15 @@ class IMU_GPS_Node(Node):
         imu_msg.linear_acceleration.z = data_dict["linear_acceleration"][2]
 
         self.pub_imu.publish(imu_msg)
-        # pub gps
-        gps_msg = NavSatFix()
-        gps_msg.latitude = data_dict["lla"][0]
-        gps_msg.longitude = data_dict["lla"][1]
-        gps_msg.altitude = data_dict["lla"][2]
-        self.pub_gps.publish(gps_msg)
+        # # pub gps
+        # gps_msg = NavSatFix()
+        # gps_msg.latitude = data_dict["lla"][0]
+        # gps_msg.longitude = data_dict["lla"][1]
+        # gps_msg.altitude = data_dict["lla"][2]
+        # self.pub_gps.publish(gps_msg)
         if self.get_parameter("debug").value:
             self.get_logger().info("imu:\n"+"angle-->"+str(data_dict['angle_degree'])+"\nori-->"+str(imu_msg.orientation)+"\nangular_velocity-->"+str(imu_msg.angular_velocity)+"\nlinear_acceleration-->"+str(imu_msg.linear_acceleration))
-            self.get_logger().info("gps:\n"+"lat,lon,alt-->"+str(gps_msg.latitude)+","+str(gps_msg.longitude)+","+str(gps_msg.altitude))
+            # self.get_logger().info("gps:\n"+"lat,lon,alt-->"+str(gps_msg.latitude)+","+str(gps_msg.longitude)+","+str(gps_msg.altitude))
 
 def main(args=None):
     rclpy.init(args=args)
