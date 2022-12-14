@@ -28,6 +28,10 @@
 
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
+#include "tf2_ros/static_transform_broadcaster.h"
+#include "geometry_msgs/msg/transform_stamped.hpp"
+#include "tf2/LinearMath/Quaternion.h"
+
 
 namespace autoware
 {
@@ -126,6 +130,7 @@ private:
   const std::chrono::nanoseconds m_timeout;
   const typename rclcpp::Subscription<PointCloud2>::SharedPtr m_sub_ptr;
   const typename std::shared_ptr<rclcpp::Publisher<PointCloud2>> m_pub_ptr;
+  const typename std::shared_ptr<tf2_ros::StaticTransformBroadcaster> tf_publisher_;
   const size_t m_expected_num_publishers;
   const size_t m_expected_num_subscribers;
   const std::uint32_t m_pcl_size;

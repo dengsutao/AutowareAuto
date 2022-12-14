@@ -122,6 +122,9 @@ private:
 
     size_t max_queue_length = 10;
 
+    rclcpp::Time init_stamp;
+    rclcpp::Time cur_stamp;
+
 private:
     void SetCovarianceQ(double gyro_noise_cov, double accel_noise_cov);
 
@@ -187,7 +190,7 @@ private:
      */
     void ResetState();
 
-    Eigen::Vector3d correct_eular_angle(Eigen::Vector3d eular_angle);
+    Eigen::Vector3d quat2eular(Eigen::Quaterniond quat);
 
 public:
     eskf(std::string name);
@@ -201,6 +204,7 @@ public:
     rclcpp::Publisher<std_msgs::msg::UInt32>::SharedPtr reset_odom_pub;
 
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr fused_pose_pub;
+    rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr fused_pose_pub1;
 
     bool predict();
     bool odom_correct();
