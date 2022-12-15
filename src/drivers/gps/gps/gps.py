@@ -148,16 +148,16 @@ class GPS_Node(Node):
             latitude = data['latitude']
             if data['latitude_direction'] == 'S':
                 latitude = -latitude
-            current_fix.latitude = latitude
+            current_fix.latitude = latitude if not math.isnan(latitude) else 0.0
 
             longitude = data['longitude']
             if data['longitude_direction'] == 'W':
                 longitude = -longitude
-            current_fix.longitude = longitude
+            current_fix.longitude = longitude if not math.isnan(longitude) else 0.0
 
             # Altitude is above ellipsoid, so adjust for mean-sea-level
             altitude = data['altitude'] + data['mean_sea_level']
-            current_fix.altitude = altitude
+            current_fix.altitude = altitude if not math.isnan(altitude) else 0.0
 
             # use default epe std_dev unless we've received a GST sentence with
             # epes
@@ -175,7 +175,7 @@ class GPS_Node(Node):
                 2 * hdop * self.alt_std_dev) ** 2  # FIXME
 
             if self.get_parameter("debug").value:
-                self.get_logger().info("lon,lat,alt-->"+str(longitude)+','+str(latitude)+','+str(altitude))
+                self.get_logger().info("lon,lat,alt-->"+str(current_fix.longitude)+','+str(current_fix.latitude)+','+str(current_fix.altitude))
             self.pub_gps.publish(current_fix)
 
             self.position_covariance_type = current_fix.position_covariance_type

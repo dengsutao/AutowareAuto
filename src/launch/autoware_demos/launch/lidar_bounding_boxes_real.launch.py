@@ -108,6 +108,7 @@ def generate_launch_description():
         # 'lexus_rx_450h.urdf'
         'navi_car.urdf'
     )
+    print("urdf path:",urdf_path)
     with open(urdf_path, 'r') as infp:
         urdf_file = infp.read()
     robot_state_publisher_runner = launch_ros.actions.Node(

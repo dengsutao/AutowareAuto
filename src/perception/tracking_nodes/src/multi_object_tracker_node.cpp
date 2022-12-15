@@ -315,6 +315,7 @@ MultiObjectTrackerNode::TrackerVariant MultiObjectTrackerNode::init_tracker(
 
 void MultiObjectTrackerNode::clusters_callback(const ClustersMsg::ConstSharedPtr objs)
 {
+  
   const rclcpp::Time msg_stamp{objs->header.stamp.sec, objs->header.stamp.nanosec};//rmflag
   const auto earliest_time = msg_stamp - kMaxLidarEgoStateStampDiff;
   const auto latest_time = msg_stamp + kMaxLidarEgoStateStampDiff;

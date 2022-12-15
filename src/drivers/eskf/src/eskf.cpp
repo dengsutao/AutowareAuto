@@ -275,7 +275,7 @@ void eskf::imu_callback(const sensor_msgs::msg::Imu::SharedPtr imu_msg)
     if (((init_flag_>>FLAG_VALID_GPS) & 1) == 1) gps_correct();
     else if (get_parameter("debug").as_bool()) std::cout<<"gps invalid"<<std::endl;
     // save time and pose
-    if (mode!=2) record();
+    if (mode<=1) record();
     // 更新上一帧pose
     last_pose_ = pose_;
     // pop
@@ -571,8 +571,9 @@ bool eskf::record()
     Eigen::Matrix3d mat = pose_.block<3,3>(0,0);
     Eigen::Quaterniond quat(mat);
     Eigen::Vector3d rpy = quat2eular(quat);
-
-    fout<<std::setprecision(11)<<"time:"<<curr_time\
+    if (mode==1)
+    {
+        fout<<std::setprecision(11)<<"time:"<<curr_time\
             <<","<<" enu_pose:"<<curr_e<<","<<curr_n<<","<<curr_u\
             <<","<<" lla_pose:"<<curr_lat<<","<<curr_lon<<","<<curr_alt\
             <<","<<" rpy:"<<rpy.x()<<","<<rpy.y()<<","<<rpy.z()\
@@ -582,6 +583,7 @@ bool eskf::record()
             <<","<<" gps_enu_pose:"<<curr_gps_e<<","<<curr_gps_n<<","<<curr_gps_u\
             <<","<<" odom_enu_pose:"<<curr_odom_e<<","<<curr_odom_n<<","<<curr_odom_u\
             <<std::endl;
+    }
     if (get_parameter("debug").as_bool())
     std::cout<<std::setprecision(11)<<"time:"<<curr_time\
             <<","<<" enu_pose:"<<curr_e<<","<<curr_n<<","<<curr_u\
@@ -594,8 +596,8 @@ bool eskf::record()
             <<","<<" odom_enu_pose:"<<curr_odom_e<<","<<curr_odom_n<<","<<curr_odom_u\
             <<std::endl;
     nav_msgs::msg::Odometry fused_pose;
-    fused_pose.header.frame_id = "base_link";
-    fused_pose.child_frame_id = "odom";
+    fused_pose.header.frame_id = "odom";
+    fused_pose.child_frame_id = "base_link";
     auto duration = cur_stamp - init_stamp;
     fused_pose.header.stamp = rclcpp::Time(0,0) + duration;
     // fused_pose.header.stamp = cur_stamp; 

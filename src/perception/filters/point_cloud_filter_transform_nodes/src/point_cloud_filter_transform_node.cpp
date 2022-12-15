@@ -241,7 +241,7 @@ PointCloud2FilterTransformNode::process_imu_message(
   // 输出小车到大地的四元数转换,分为两步:1.小车到imu;2.imu到大地
   // 以小车前方为n的话,小车坐标系nwu;imu坐标系enu;大地坐标系nwu;
 
-  float pi = static_cast<float>(M_PI);
+  // float pi = static_cast<float>(M_PI);
   // 小车到imu
   Eigen::Quaternionf quat_nwu2enu = Eigen::Quaternionf{static_cast<float>(pow(0.5,0.5)),
                                                       0.0,
@@ -252,15 +252,15 @@ PointCloud2FilterTransformNode::process_imu_message(
                                                       static_cast<float>(msg->orientation.x),
                                                       static_cast<float>(msg->orientation.y),
                                                       static_cast<float>(msg->orientation.z)};
-  Eigen::Vector3f euler_tmp = imu_quat_enu.toRotationMatrix().eulerAngles(2,1,0);
-  RCLCPP_INFO(get_logger(), "imu x,y,z="+std::to_string(euler_tmp.x()*180/pi)+","+std::to_string(euler_tmp.y()*180/pi)+","+std::to_string(euler_tmp.z()*180/pi));
+  // Eigen::Vector3f euler_tmp = imu_quat_enu.toRotationMatrix().eulerAngles(2,1,0);
+  // RCLCPP_INFO(get_logger(), "imu x,y,z="+std::to_string(euler_tmp.x()*180/pi)+","+std::to_string(euler_tmp.y()*180/pi)+","+std::to_string(euler_tmp.z()*180/pi));
   Eigen::Quaternionf quat_enu2nwu = Eigen::Quaternionf{static_cast<float>(pow(0.5,0.5)),
                                                       0.0,
                                                       0.0,
                                                       static_cast<float>(-pow(0.5,0.5))};
   Eigen::Quaternionf imu_quat = quat_enu2nwu * imu_quat_enu * quat_nwu2enu;
-  euler_tmp = imu_quat.toRotationMatrix().eulerAngles(2,1,0);
-  RCLCPP_INFO(get_logger(), "car2ground x,y,z="+std::to_string(euler_tmp.x()*180/pi)+","+std::to_string(euler_tmp.y()*180/pi)+","+std::to_string(euler_tmp.z()*180/pi));
+  // euler_tmp = imu_quat.toRotationMatrix().eulerAngles(2,1,0);
+  // RCLCPP_INFO(get_logger(), "car2ground x,y,z="+std::to_string(euler_tmp.x()*180/pi)+","+std::to_string(euler_tmp.y()*180/pi)+","+std::to_string(euler_tmp.z()*180/pi));
 
   // // 以下为获取欧拉角,并修正eulerangles的x默认必须是[0,pi]的问题
   // // eulerAngles()得到的欧拉角,x范围限制在了[0,pi],即如果小车向左倾斜0.1rad,x值不是-0.1,而是pi-0.1

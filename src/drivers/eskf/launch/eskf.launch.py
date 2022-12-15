@@ -12,6 +12,14 @@ def generate_launch_description():
             'baudrate': 115200,
             "debug": False
          }])
+    gps_runner = launch_ros.actions.Node(
+        package='gps',
+        executable='gps_node',
+        parameters=[{
+            'port': "/dev/gps",
+            'baudrate': 9600,
+            "debug": False
+         }])
     wheel_imu_runner = launch_ros.actions.Node(
         package='wheel_imu',
         executable='wheel_imu_node',
@@ -27,6 +35,7 @@ def generate_launch_description():
          }])
     return launch.LaunchDescription([
         imu_gps_runner,
+        gps_runner,
         wheel_imu_runner,
         eskf_runner
         ])

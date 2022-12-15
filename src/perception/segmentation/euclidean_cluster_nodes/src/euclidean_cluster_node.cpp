@@ -196,7 +196,11 @@ void EuclideanClusterNode::publish_clusters(
   const std_msgs::msg::Header & header)
 {
   m_clusters.header = header;
-  m_clusters.header.stamp = get_clock()->now();;
+  m_clusters.header.stamp = get_clock()->now();
+  if (m_clusters.header.stamp.sec==0)
+  {
+    RCLCPP_WARN(get_logger(), "--------------------m_clusters.header.stamp.sec==0--------------------");
+  }
   m_cluster_pub_ptr->publish(clusters);
 }
 ////////////////////////////////////////////////////////////////////////////////
