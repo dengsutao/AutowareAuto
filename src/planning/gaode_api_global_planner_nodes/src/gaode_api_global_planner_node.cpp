@@ -192,7 +192,7 @@ bool8_t GaodeApiGlobalPlannerNode::plan_route(
                                               "&origin="+lon_lat_start+
                                               "&destination="+lon_lat_end+
                                               "&show_fields=polyline";
-  std::cout<<"request url="<<route_url<<std::endl;
+  //std::cout<<"request url="<<route_url<<std::endl;
   cpr::Response r = cpr::Get(cpr::Url{route_url});
 
   if (r.status_code!=200)
@@ -207,7 +207,7 @@ bool8_t GaodeApiGlobalPlannerNode::plan_route(
   Json::StreamWriterBuilder builder;
   builder["indentation"] = ""; // If you want whitespace-less output
   const std::string output = Json::writeString(builder, data);
-  std::cout<<output<<std::endl;
+  //std::cout<<output<<std::endl;
   /***{"count":"1","info":"OK","infocode":"10000","route":{"destination":"116.362549,40.066387","origin":"116.362462,40.066987",
    * "paths":[{"cost":{"duration":"118"},"distance":"148","steps":[{"instruction":"向东步行31米右转","orientation":"东","road_name":"","step_distance":"31"},
    * {"instruction":"向西南步行117米到达目的地","orientation":"西南","road_name":"","step_distance":"117"}]}]},"status":"1"}
@@ -250,9 +250,9 @@ bool8_t GaodeApiGlobalPlannerNode::plan_route(
     auto y1 = enu_route[i].position.y;
     auto x2 = gps_route[i].longitude;
     auto y2 = gps_route[i].latitude;
-    std::cout<<"enu_pose:"<<to_string(x1)<<","<<to_string(y1)
-            <<std::setprecision(10)
-            <<"\tgps_pose:"<<to_string(x2)<<","<<to_string(y2)<<std::endl;
+    // std::cout<<"enu_pose:"<<to_string(x1)<<","<<to_string(y1)
+    //         <<std::setprecision(10)
+    //         <<"\tgps_pose:"<<to_string(x2)<<","<<to_string(y2)<<std::endl;
   }
   return true;
 }

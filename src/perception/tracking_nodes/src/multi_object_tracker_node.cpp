@@ -57,7 +57,7 @@ using std::placeholders::_2;
 
 namespace
 {
-constexpr std::chrono::milliseconds kMaxLidarEgoStateStampDiff{1000};//rmflag
+constexpr std::chrono::milliseconds kMaxLidarEgoStateStampDiff{100};//rmflag
 constexpr std::int64_t kDefaultHistoryDepth{20};
 constexpr std::int64_t kDefaultPoseHistoryDepth{100};
 

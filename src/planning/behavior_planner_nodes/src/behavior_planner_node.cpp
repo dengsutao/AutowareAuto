@@ -83,15 +83,15 @@ void BehaviorPlannerNode::init()
     "plan_parking_trajectory");
 
   // wait until action clients are ready
-  while (!m_lane_planner_client->wait_for_action_server(1s)) {
-    if (!rclcpp::ok()) {
-      RCLCPP_ERROR(
-        get_logger(), "Interrupted while waiting for action server 'plan_lane_trajectory'.");
-      rclcpp::shutdown();
-      return;
-    }
-    RCLCPP_INFO(get_logger(), "Waiting for action server 'plan_lane_trajectory'...");
-  }
+  // while (!m_lane_planner_client->wait_for_action_server(1s)) {
+  //   if (!rclcpp::ok()) {
+  //     RCLCPP_ERROR(
+  //       get_logger(), "Interrupted while waiting for action server 'plan_lane_trajectory'.");
+  //     rclcpp::shutdown();
+  //     return;
+  //   }
+  //   RCLCPP_INFO(get_logger(), "Waiting for action server 'plan_lane_trajectory'...");
+  // }
   while (!m_parking_planner_client->wait_for_action_server(1s)) {
     if (!rclcpp::ok()) {
       RCLCPP_ERROR(
