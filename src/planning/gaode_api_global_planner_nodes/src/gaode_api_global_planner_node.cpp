@@ -100,7 +100,7 @@ GaodeApiGlobalPlannerNode::GaodeApiGlobalPlannerNode(
     "init_gps", rclcpp::QoS(10),
     std::bind(&GaodeApiGlobalPlannerNode::init_gps_cb, this, _1));
   
-  declare_parameter("vis",)
+  declare_parameter<bool>("vis",false);
   
 }
 
@@ -348,7 +348,7 @@ void GaodeApiGlobalPlannerNode::send_global_path(
   gaode_route.end_gps_pose = end_gps_pose;
   gaode_route.gps_route = gps_route;
   global_path_pub_ptr->publish(gaode_route);
-  visualize(gaode_route);
+  if (get_parameter("vis").as_bool()) visualize(gaode_route);
   
 }
 
@@ -434,8 +434,8 @@ bool8_t GaodeApiGlobalPlannerNode::visualize(const gaode_api_route_msgs::msg::Ga
   std::string paths = paths_style+locations;
   std::string url = url_static_map+"key="+apikey+
                     // "&locations="+location+ 
-                    "&zoom=10"+
-                    "&size=400*400"+
+                    "&zoom=17"+
+                    "&size=1000*1000"+
                     "&scale=1"+
                     "&paths="+paths
                     ;
