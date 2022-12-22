@@ -616,13 +616,14 @@ bool eskf::record()
     fused_pose.pose.pose.orientation.z = curr_imu_data.quat.z();
     fused_pose_pub->publish(fused_pose);
 
+    auto now = get_clock()->now();
     nav_msgs::msg::Odometry fused_pose1 = fused_pose;
-    fused_pose1.header.stamp = get_clock()->now();
+    fused_pose1.header.stamp = now;
     fused_pose_pub1->publish(fused_pose1);
 
     geometry_msgs::msg::PoseStamped cur_pose;
     cur_pose.header.frame_id = "odom";
-    cur_pose.header.stamp = get_clock()->now();
+    cur_pose.header.stamp = now;
     cur_pose.pose.position.x = curr_e;
     cur_pose.pose.position.y = curr_n;
     cur_pose.pose.position.z = curr_u;
@@ -632,6 +633,19 @@ bool eskf::record()
     cur_pose.pose.orientation.z = curr_imu_data.quat.z();
     cur_pose_pub->publish(cur_pose);    
 
+    //publish tf
+    geometry_msgs::msg::TransformStamped t;
+    t.header.stamp = now;
+    t.header.frame_id = "odom";
+    t.child_frame_id = "base_link";
+    t.transform.translation.x = curr_e;
+    t.transform.translation.y = curr_n;
+    t.transform.translation.z = curr_u;
+    t.transform.rotation.w = curr_imu_data.quat.w();
+    t.transform.rotation.x = curr_imu_data.quat.x();
+    t.transform.rotation.y = curr_imu_data.quat.y();
+    t.transform.rotation.z = curr_imu_data.quat.z();
+    tf_broadcaster_->sendTransform(t);
     return true;
 }
 
@@ -949,6 +963,7 @@ eskf::eskf(std::string name): Node(name)
     fused_pose_pub1 = create_publisher<nav_msgs::msg::Odometry>("fused_pose1", 10);
     cur_pose_pub = create_publisher<geometry_msgs::msg::PoseStamped>("cur_pose", 10);
     init_gps_pub = create_publisher<sensor_msgs::msg::NavSatFix>("init_gps", 10);
+    tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
     // 小车目标速度的publisher
     twist_pub = create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
     // 默认小车自身坐标系下y方向速度为0

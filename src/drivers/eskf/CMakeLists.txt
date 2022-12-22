@@ -23,6 +23,8 @@ find_package(std_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(tf2_ros REQUIRED)
+
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -55,6 +57,7 @@ ament_target_dependencies(eskf_node sensor_msgs)
 ament_target_dependencies(eskf_node std_msgs)
 ament_target_dependencies(eskf_node nav_msgs)
 ament_target_dependencies(eskf_node geometry_msgs)
+ament_target_dependencies(eskf_node tf2_ros)
 
 install(TARGETS
   eskf_node

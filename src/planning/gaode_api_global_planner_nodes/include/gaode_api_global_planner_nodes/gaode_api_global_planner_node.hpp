@@ -54,6 +54,11 @@
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Dense>
 
+// json
+#include <jsoncpp/json/json.h>
+// cpr
+#include <cpr/cpr.h>
+
 using namespace std::chrono_literals;
 using autoware::common::types::bool8_t;
 using autoware::common::types::float64_t;
@@ -102,6 +107,11 @@ public:
     sensor_msgs::msg::NavSatFix & gps_pose,
     vector<geometry_msgs::msg::Pose> & enu_route,
     vector<sensor_msgs::msg::NavSatFix> & gps_route);
+  bool8_t to_gaode_gps(
+    std::string & gps_str,
+    bool8_t is_start);
+  bool8_t visualize(const gaode_api_route_msgs::msg::GaodeApiRoute & msg);
+  bool8_t parse(std::string & url, Json::Value & data);
 
 
 private:
@@ -119,6 +129,8 @@ private:
   tf2_ros::TransformListener tf_listener;
   static GeographicLib::LocalCartesian geo_converter_;
   rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr init_gps_sub_ptr;
+  vector<double> gps_offset;
+  
 };
 }  // namespace gaode_api_global_planner_nodes
 }  // namespace planning

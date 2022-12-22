@@ -36,10 +36,6 @@
 #include <memory>
 #include <vector>
 
-// json
-#include <jsoncpp/json/json.h>
-// cpr
-#include <cpr/cpr.h>
 
 using namespace std::chrono_literals;
 using autoware::common::types::bool8_t;
@@ -56,6 +52,10 @@ const std::string url_address2geo_prefix = "https://restapi.amap.com/v3/geocode/
 const std::string url_geo2regeo_prefix = "https://restapi.amap.com/v3/geocode/regeo?";
 //步行规划，起始经纬度->目标经纬度
 const std::string url_walking_prefix = "https://restapi.amap.com/v5/direction/walking?";
+//gps经纬度坐标到高德坐标
+const std::string url_to_gaode_coord = "https://restapi.amap.com/v3/assistant/coordinate/convert?";
+//静态地图
+const std::string url_static_map = "https://restapi.amap.com/v3/staticmap?";
 
 const std::string apikey = "29ad5efe8c382d9f42e70a246748d0ce";
 
@@ -99,6 +99,9 @@ GaodeApiGlobalPlannerNode::GaodeApiGlobalPlannerNode(
     this->create_subscription<sensor_msgs::msg::NavSatFix>(
     "init_gps", rclcpp::QoS(10),
     std::bind(&GaodeApiGlobalPlannerNode::init_gps_cb, this, _1));
+  
+  declare_parameter("vis",)
+  
 }
 
 void GaodeApiGlobalPlannerNode::goal_pose_cb(
@@ -182,41 +185,26 @@ bool8_t GaodeApiGlobalPlannerNode::plan_route(
   vector<sensor_msgs::msg::NavSatFix> & gps_route)
 {
   std::string isindoor = "0"; // 是否需要室内算路:0,不需要;1,需要
+  // odom pose to gps pose
   to_gps(start_enu_pose, start_gps_pose);
   to_gps(end_enu_pose, end_gps_pose);
+  // to string
   std::string lon_lat_start = to_string(start_gps_pose.longitude)+","+to_string(start_gps_pose.latitude);
+  if (!to_gaode_gps(lon_lat_start, true)) return false;
   std::string lon_lat_end = to_string(end_gps_pose.longitude)+","+to_string(end_gps_pose.latitude);
-  std::cout<<lon_lat_start<<"-------->"<<lon_lat_end<<std::endl;;
+  if (!to_gaode_gps(lon_lat_end, true)) return false;
+  RCLCPP_DEBUG(get_logger(),lon_lat_start+"-------->"+lon_lat_end);
+  RCLCPP_DEBUG(get_logger(),"gps_offset, gaode gps vs ori gps(degree):"+to_string(gps_offset[0])+","+to_string(gps_offset[1]));
+  // request url
   std::string route_url = url_walking_prefix+"key="+apikey+
                                               "&isindoor="+isindoor+
                                               "&origin="+lon_lat_start+
                                               "&destination="+lon_lat_end+
                                               "&show_fields=polyline";
-  //std::cout<<"request url="<<route_url<<std::endl;
-  cpr::Response r = cpr::Get(cpr::Url{route_url});
-
-  if (r.status_code!=200)
-  {
-      std::cout<<"wrong response code:"<<r.status_code<<std::endl;
-      return false;
-  }
-  Json::Reader reader;
   Json::Value data;
-  reader.parse(r.text, data);
-
-  Json::StreamWriterBuilder builder;
-  builder["indentation"] = ""; // If you want whitespace-less output
-  const std::string output = Json::writeString(builder, data);
-  //std::cout<<output<<std::endl;
-  /***{"count":"1","info":"OK","infocode":"10000","route":{"destination":"116.362549,40.066387","origin":"116.362462,40.066987",
-   * "paths":[{"cost":{"duration":"118"},"distance":"148","steps":[{"instruction":"向东步行31米右转","orientation":"东","road_name":"","step_distance":"31"},
-   * {"instruction":"向西南步行117米到达目的地","orientation":"西南","road_name":"","step_distance":"117"}]}]},"status":"1"}
-  ***/
-  if (data["info"].asString()!="OK")
-  {
-    RCLCPP_WARN(get_logger(), "gaode api response:"+data["info"].asString());
-    return false;
-  }
+  if (!parse(route_url, data)) return false;
+  
+  // concat gps poses in polylines
   Json::Value steps = data["route"]["paths"][0]["steps"];
   for (size_t i=0;i<steps.size();i++)
   {
@@ -231,8 +219,9 @@ bool8_t GaodeApiGlobalPlannerNode::plan_route(
       sensor_msgs::msg::NavSatFix gps_pose;
       geometry_msgs::msg::Pose enu_pose;
       size_t idx = lon_lat.find_first_of(',');
-      gps_pose.longitude = std::stod(lon_lat.substr(0,idx));
-      gps_pose.latitude = std::stod(lon_lat.substr(idx+1,lon_lat.size()-idx-1));
+      // 为了减少调用次数，这里高德转原始gps时直接根据gps_offset相减了
+      gps_pose.longitude = std::stod(lon_lat.substr(0,idx)) - gps_offset[0];
+      gps_pose.latitude = std::stod(lon_lat.substr(idx+1,lon_lat.size()-idx-1)) - gps_offset[1];
       add_pose(enu_pose, gps_pose, enu_route, gps_route);
       p = q+1;
     }
@@ -240,19 +229,20 @@ bool8_t GaodeApiGlobalPlannerNode::plan_route(
     sensor_msgs::msg::NavSatFix gps_pose;
     geometry_msgs::msg::Pose enu_pose;
     size_t idx = lon_lat.find_first_of(',');
-    gps_pose.longitude = std::stod(lon_lat.substr(0,idx));
-    gps_pose.latitude = std::stod(lon_lat.substr(idx+1,lon_lat.size()-idx-1));
+    gps_pose.longitude = std::stod(lon_lat.substr(0,idx)) - gps_offset[0];
+    gps_pose.latitude = std::stod(lon_lat.substr(idx+1,lon_lat.size()-idx-1)) - gps_offset[1];
     add_pose(enu_pose, gps_pose, enu_route, gps_route);
   }
+
+  std::setprecision(10);
   for (size_t i=0;i<gps_route.size();i++)
   {
     auto x1 = enu_route[i].position.x;
     auto y1 = enu_route[i].position.y;
     auto x2 = gps_route[i].longitude;
     auto y2 = gps_route[i].latitude;
-    // std::cout<<"enu_pose:"<<to_string(x1)<<","<<to_string(y1)
-    //         <<std::setprecision(10)
-    //         <<"\tgps_pose:"<<to_string(x2)<<","<<to_string(y2)<<std::endl;
+    RCLCPP_DEBUG(get_logger(),"enu_pose:"+to_string(x1)+","+to_string(y1)
+                +"\tgps_pose:"+to_string(x2)+","+to_string(y2));
   }
   return true;
 }
@@ -358,6 +348,7 @@ void GaodeApiGlobalPlannerNode::send_global_path(
   gaode_route.end_gps_pose = end_gps_pose;
   gaode_route.gps_route = gps_route;
   global_path_pub_ptr->publish(gaode_route);
+  visualize(gaode_route);
   
 }
 
@@ -396,6 +387,86 @@ void GaodeApiGlobalPlannerNode::init_gps_cb(const sensor_msgs::msg::NavSatFix::S
     +to_string(msg->longitude)+","
     +to_string(msg->latitude)+","
     +to_string(msg->altitude));
+}
+
+bool8_t GaodeApiGlobalPlannerNode::to_gaode_gps(
+  std::string & gps_str,
+  bool8_t is_start)
+{
+  // request url
+  std::string trans_url = url_to_gaode_coord+"key="+apikey+
+                                              "&locations="+gps_str+
+                                              "&coordsys=gps";
+  Json::Value data;
+  if (!parse(trans_url, data)) return false;
+  std::string ori_str(gps_str);
+  gps_str = data["locations"].asString();
+  if (is_start)
+  {
+    gps_offset.clear();
+    size_t idx0 = gps_str.find_first_of(',');
+    size_t idx1 = ori_str.find_first_of(',');
+    gps_offset.push_back(
+      std::stod(gps_str.substr(0,idx0))-
+      std::stod(ori_str.substr(0,idx1)));
+    gps_offset.push_back(
+      std::stod(gps_str.substr(idx0+1, gps_str.size()-idx0-1))-
+      std::stod(ori_str.substr(idx1+1, ori_str.size()-idx1-1)));
+  }
+  return true;
+
+}
+
+bool8_t GaodeApiGlobalPlannerNode::visualize(const gaode_api_route_msgs::msg::GaodeApiRoute & msg)
+{
+  std::string location = to_string(msg.start_gps_pose.longitude)+","+to_string(msg.start_gps_pose.latitude);
+  // request url
+  // location和zoom在有折线数据的条件下可选
+  // weight, color, transparency, fillcolor, fillTransparency
+  std::string paths_style = "10,0x0000ff,1,,:";
+  std::string locations("");
+  auto gps_route = msg.gps_route;
+  for (size_t i=0;i<gps_route.size();i++)
+  {
+    locations+=to_string(gps_route[i].longitude+gps_offset[0])+","+to_string(gps_route[i].latitude+gps_offset[1]);
+    if (i<gps_route.size()-1) locations+=";";
+  }
+  std::string paths = paths_style+locations;
+  std::string url = url_static_map+"key="+apikey+
+                    // "&locations="+location+ 
+                    "&zoom=10"+
+                    "&size=400*400"+
+                    "&scale=1"+
+                    "&paths="+paths
+                    ;
+  RCLCPP_INFO(get_logger(),url);
+  return true;
+}
+
+bool8_t GaodeApiGlobalPlannerNode::parse(std::string & url, Json::Value & data)
+{
+  RCLCPP_DEBUG(get_logger(), "request url="+url);
+  cpr::Response r = cpr::Get(cpr::Url{url});
+
+  if (r.status_code!=200)
+  {
+    RCLCPP_DEBUG(get_logger(), "wrong response code:"+r.status_code);
+    return false;
+  }
+  // json parse
+  Json::Reader reader;
+  reader.parse(r.text, data);
+
+  Json::StreamWriterBuilder builder;
+  builder["indentation"] = ""; // If you want whitespace-less output
+  const std::string output = Json::writeString(builder, data);
+  RCLCPP_DEBUG(get_logger(), output);
+  if (data["info"].asString()!="ok" && data["info"].asString()!="OK")
+  {
+    RCLCPP_WARN(get_logger(), "gaode api response:"+data["info"].asString());
+    return false;
+  }
+  return true;
 }
 
 }  // namespace gaode_api_global_planner_nodes
