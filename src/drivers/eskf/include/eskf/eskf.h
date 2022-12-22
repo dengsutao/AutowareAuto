@@ -13,6 +13,7 @@
 #include "sensor_msgs/msg/nav_sat_fix.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "geometry_msgs/msg/twist.hpp"
+#include "geometry_msgs/msg/pose_stamped.hpp"
 #include "GeographicLib/LocalCartesian.hpp"
 #include "../3rd/sophus/se3.hpp"
 #include <deque>
@@ -205,7 +206,9 @@ public:
 
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr fused_pose_pub;
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr fused_pose_pub1;
-    //rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr fused_pose_pub2;
+
+    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr cur_pose_pub;
+    rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr init_gps_pub;
 
     bool predict();
     bool odom_correct();

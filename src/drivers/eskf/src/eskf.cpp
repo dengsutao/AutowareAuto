@@ -104,10 +104,6 @@ IMUData eskf::convert_data(const sensor_msgs::msg::Imu::SharedPtr imu_msg)
                                         imu_msg->orientation.x, 
                                         imu_msg->orientation.y, 
                                         imu_msg->orientation.z);
-    // Eigen::Quaterniond wsu2enu_quat = Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitZ())*
-    //                                 Eigen::AngleAxisd(0.0, Eigen::Vector3d::UnitY())*
-    //                                 Eigen::AngleAxisd(0.0, Eigen::Vector3d::UnitX());
-    // imu_data.quat = imu_data.quat * wsu2enu_quat;
     imu_data.angle = quat2eular(imu_data.quat);
 
     return imu_data;
@@ -158,9 +154,18 @@ void eskf::gps_callback(const sensor_msgs::msg::NavSatFix::SharedPtr gps_msg)
     {
         // 初始化相对坐标的0点，用于将lla转化为enu坐标系，得到gps的position_enu
         eskf::geo_converter_ = GeographicLib::LocalCartesian{gps_msg->latitude, gps_msg->longitude, gps_msg->altitude};
-        // init_gps_data_ = convert_data(gps_msg);
-        // curr_gps_data_ = init_gps_data_;
+        init_gps_data_ = convert_data(gps_msg);
+        curr_gps_data_ = init_gps_data_;
         // gps_data_buff_.push_back(curr_gps_data_);
+        
+        // 发布初始gps数据
+        sensor_msgs::msg::NavSatFix gps_msg;
+        gps_msg.latitude = curr_gps_data_.position_lla.x();
+        gps_msg.longitude = curr_gps_data_.position_lla.y();
+        gps_msg.altitude = curr_gps_data_.position_lla.z();
+        gps_msg.header.stamp = get_clock()->now();
+        init_gps_pub->publish(gps_msg);
+
         init_flag_+=1<<FLAG_RECV_GPS;
         RCLCPP_INFO(get_logger(), "start receive gps data");
         return;
@@ -605,18 +610,28 @@ bool eskf::record()
     fused_pose.pose.pose.position.x = curr_e;
     fused_pose.pose.pose.position.y = curr_n;
     fused_pose.pose.pose.position.z = curr_u;
-    // Eigen::Quaterniond quat(mat);
-    fused_pose.pose.pose.orientation.w = 1.0;
-    fused_pose.pose.pose.orientation.x = 0.0;
-    fused_pose.pose.pose.orientation.y = 0.0;
-    fused_pose.pose.pose.orientation.z = 0.0;
+    fused_pose.pose.pose.orientation.w = curr_imu_data.quat.w();
+    fused_pose.pose.pose.orientation.x = curr_imu_data.quat.x();
+    fused_pose.pose.pose.orientation.y = curr_imu_data.quat.y();
+    fused_pose.pose.pose.orientation.z = curr_imu_data.quat.z();
     fused_pose_pub->publish(fused_pose);
 
     nav_msgs::msg::Odometry fused_pose1 = fused_pose;
     fused_pose1.header.stamp = get_clock()->now();
     fused_pose_pub1->publish(fused_pose1);
 
-    //fused_pose_pub2->publish(fused_pose1);
+    geometry_msgs::msg::PoseStamped cur_pose;
+    cur_pose.header.frame_id = "odom";
+    cur_pose.header.stamp = get_clock()->now();
+    cur_pose.pose.position.x = curr_e;
+    cur_pose.pose.position.y = curr_n;
+    cur_pose.pose.position.z = curr_u;
+    cur_pose.pose.orientation.w = curr_imu_data.quat.w();
+    cur_pose.pose.orientation.x = curr_imu_data.quat.x();
+    cur_pose.pose.orientation.y = curr_imu_data.quat.y();
+    cur_pose.pose.orientation.z = curr_imu_data.quat.z();
+    cur_pose_pub->publish(cur_pose);    
+
     return true;
 }
 
@@ -932,7 +947,8 @@ eskf::eskf(std::string name): Node(name)
     // 最终pub的数据
     fused_pose_pub = create_publisher<nav_msgs::msg::Odometry>("fused_pose", 10);
     fused_pose_pub1 = create_publisher<nav_msgs::msg::Odometry>("fused_pose1", 10);
-    //fused_pose_pub2 = create_publisher<nav_msgs::msg::Odometry>("odom", 10);
+    cur_pose_pub = create_publisher<geometry_msgs::msg::PoseStamped>("cur_pose", 10);
+    init_gps_pub = create_publisher<sensor_msgs::msg::NavSatFix>("init_gps", 10);
     // 小车目标速度的publisher
     twist_pub = create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
     // 默认小车自身坐标系下y方向速度为0
