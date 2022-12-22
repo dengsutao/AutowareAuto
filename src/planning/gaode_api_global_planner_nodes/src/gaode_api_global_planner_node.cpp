@@ -114,7 +114,7 @@ void GaodeApiGlobalPlannerNode::goal_pose_cb(
   geometry_msgs::msg::PoseStamped goal_pose_map = goal_pose;
 
   if (goal_pose.header.frame_id != "odom") {
-    if (!transform_pose_to_map(goal_pose, goal_pose_map)) {
+    if (!transform_pose_to_odom(goal_pose, goal_pose_map)) {
       // return: nothing happen
       return;
     } else {
@@ -159,7 +159,7 @@ void GaodeApiGlobalPlannerNode::current_pose_cb(
   if (start_pose.header.frame_id != "odom") {
     geometry_msgs::msg::PoseStamped start_pose_map = start_pose;
 
-    if (!transform_pose_to_map(start_pose, start_pose_map)) {
+    if (!transform_pose_to_odom(start_pose, start_pose_map)) {
       // transform failed
       start_pose_init = false;
     } else {
@@ -361,31 +361,30 @@ void GaodeApiGlobalPlannerNode::send_global_path(
   
 }
 
-bool8_t GaodeApiGlobalPlannerNode::transform_pose_to_map(
+bool8_t GaodeApiGlobalPlannerNode::transform_pose_to_odom(
   const geometry_msgs::msg::PoseStamped & pose_in,
   geometry_msgs::msg::PoseStamped & pose_out)
 {
   std::string source_frame = pose_in.header.frame_id;
   // lookup transform validity
-  if (!tf_buffer.canTransform("map", source_frame, tf2::TimePointZero)) {
-    RCLCPP_ERROR(this->get_logger(), "Failed to transform Pose to map frame");
+  if (!tf_buffer.canTransform("odom", source_frame, tf2::TimePointZero)) {
+    RCLCPP_ERROR(this->get_logger(), "Failed to transform Pose to odom frame");
     return false;
   }
 
-  // transform pose into map frame
-  geometry_msgs::msg::TransformStamped tf_map;
+  geometry_msgs::msg::TransformStamped tf_odom;
   try {
-    tf_map = tf_buffer.lookupTransform(
-      "map", source_frame,
+    tf_odom = tf_buffer.lookupTransform(
+      "odom", source_frame,
       time_utils::from_message(pose_in.header.stamp));
   } catch (const tf2::ExtrapolationException &) {
     // currently falls back to retrive newest transform available for availability,
     // Do validation of time stamp in the future
-    tf_map = tf_buffer.lookupTransform("map", source_frame, tf2::TimePointZero);
+    tf_odom = tf_buffer.lookupTransform("odom", source_frame, tf2::TimePointZero);
   }
 
   // apply transform
-  tf2::doTransform(pose_in, pose_out, tf_map);
+  tf2::doTransform(pose_in, pose_out, tf_odom);
   return true;
 }
 

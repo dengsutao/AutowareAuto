@@ -81,7 +81,7 @@ public:
     const sensor_msgs::msg::NavSatFix & end_gps_pose, 
     const vector<sensor_msgs::msg::NavSatFix> & gps_route,
     const std_msgs::msg::Header & header);
-  bool8_t transform_pose_to_map(
+  bool8_t transform_pose_to_odom(
     const geometry_msgs::msg::PoseStamped & pose_in, geometry_msgs::msg::PoseStamped & pose_out);
   
   bool8_t plan_route(
