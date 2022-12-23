@@ -50,12 +50,14 @@
 #include <lanelet2_core/primitives/Lanelet.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
+#include <message_filters/cache.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
 #include <autoware_auto_planning_msgs/action/planner_costmap.hpp>
 #include <autoware_auto_mapping_msgs/srv/had_map_service.hpp>
+#include <autoware_auto_perception_msgs/msg/predicted_objects.hpp>
 #include <costmap_generator/costmap_generator.hpp>
 #include <costmap_generator_nodes/visibility_control.hpp>
 #include <grid_map_ros/GridMapRosConverter.hpp>
@@ -77,9 +79,12 @@ namespace planning
 {
 namespace costmap_generator
 {
+using POMsg = autoware_auto_perception_msgs::msg::PredictedObjects;
+using PredictobjectCache = message_filters::Cache<POMsg>;
 using PlannerCostmapAction = autoware_auto_planning_msgs::action::PlannerCostmap;
 using HADMapRoute = autoware_auto_planning_msgs::msg::HADMapRoute;
 using HADMapService = autoware_auto_mapping_msgs::srv::HADMapService;
+
 
 enum class CostmapGeneratorNodeState { IDLE, GENERATING };
 
@@ -115,6 +120,12 @@ private:
   goal_handle_{nullptr};
 
   rclcpp::Client<HADMapService>::SharedPtr map_client_;
+
+  /// A cache that stores the predict object messages.
+  std::unique_ptr<PredictobjectCache> m_predict_objects_cache{};
+  /// \brief Pointer to the subscriber listening for a list of predicted_objects
+  rclcpp::Subscription<POMsg>::SharedPtr m_predicted_objects_sub{nullptr};
+  void predict_callback(const POMsg::ConstSharedPtr msg);
 
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;

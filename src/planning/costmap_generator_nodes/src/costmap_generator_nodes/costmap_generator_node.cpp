@@ -56,6 +56,8 @@
 #include "had_map_utils/had_map_visualization.hpp"
 #include "tf2/utils.h"
 
+using rclcpp::QoS;
+
 // taken from mapping/had_map/lanelet2_map_provider/src/lanelet2_map_visualizer.cpp
 void insertMarkerArray(
   visualization_msgs::msg::MarkerArray & a1, const visualization_msgs::msg::MarkerArray & a2)
@@ -143,6 +145,8 @@ namespace planning
 {
 namespace costmap_generator
 {
+constexpr std::int64_t kDefaultPoHistoryDepth{5};
+constexpr std::chrono::milliseconds kMaxLidarEgoStateStampDiff{100};
 CostmapGeneratorNode::CostmapGeneratorNode(const rclcpp::NodeOptions & node_options)
 : Node("costmap_generator_node", node_options),
   tf_buffer_(this->get_clock()),
@@ -152,6 +156,10 @@ CostmapGeneratorNode::CostmapGeneratorNode(const rclcpp::NodeOptions & node_opti
   vehicle_frame_ = this->declare_parameter<std::string>("vehicle_frame", "base_link");
   map_frame_ = this->declare_parameter<std::string>("map_frame", "map");
   route_box_padding_ = this->declare_parameter<double>("route_box_padding_m", 10.0);
+  const auto po_history_depth =
+    static_cast<size_t>(declare_parameter("predictobject_history_depth", kDefaultPoHistoryDepth));
+  m_predict_objects_cache = std::make_unique<PredictobjectCache>();
+  m_predict_objects_cache->setCacheSize(static_cast<std::uint32_t>(po_history_depth));
 
   // Costmap Parameters
   costmap_params_.grid_min_value = this->declare_parameter<double>("grid_min_value", 0.0);
@@ -172,7 +180,7 @@ CostmapGeneratorNode::CostmapGeneratorNode(const rclcpp::NodeOptions & node_opti
   // We want to do this before creating subscriptions
   while (rclcpp::ok()) {
     try {
-      tf_buffer_.lookupTransform("map", "base_link", tf2::TimePointZero);
+      tf_buffer_.lookupTransform("odom", "base_link", tf2::TimePointZero);
       break;
     } catch (const tf2::TransformException & ex) {
       RCLCPP_INFO(this->get_logger(), "Waiting for initial pose...");
@@ -180,17 +188,21 @@ CostmapGeneratorNode::CostmapGeneratorNode(const rclcpp::NodeOptions & node_opti
     rclcpp::sleep_for(std::chrono::seconds(1));
   }
 
+  m_predicted_objects_sub = this->create_subscription<POMsg>(
+    "predicted_objects", QoS{10},
+    [this](const POMsg::SharedPtr msg) {this->predict_callback(msg);});
+
   // Setup Map Service
   map_client_ = this->create_client<HADMapService>("~/client/HAD_Map_Service");
 
-  while (!map_client_->wait_for_service(std::chrono::seconds(1))) {
-    if (!rclcpp::ok()) {
-      RCLCPP_ERROR(get_logger(), "Interrupted while waiting for HAD map server.");
-      rclcpp::shutdown();
-      return;
-    }
-    RCLCPP_INFO(get_logger(), "Waiting for HAD map service...");
-  }
+  // while (!map_client_->wait_for_service(std::chrono::seconds(1))) {
+  //   if (!rclcpp::ok()) {
+  //     RCLCPP_ERROR(get_logger(), "Interrupted while waiting for HAD map server.");
+  //     rclcpp::shutdown();
+  //     return;
+  //   }
+  //   RCLCPP_INFO(get_logger(), "Waiting for HAD map service...");
+  // }
 
   // Publishers
   debug_occupancy_grid_publisher_ =
@@ -206,6 +218,12 @@ CostmapGeneratorNode::CostmapGeneratorNode(const rclcpp::NodeOptions & node_opti
     [this](auto goal_handle) {return this->handleCancel(goal_handle);},
     [this](auto goal_handle) {return this->handleAccepted(goal_handle);});
 }
+
+void CostmapGeneratorNode::predict_callback(const POMsg::ConstSharedPtr po)
+{
+  m_predict_objects_cache->add(po);
+}
+
 
 rclcpp_action::GoalResponse CostmapGeneratorNode::handleGoal(
   const rclcpp_action::GoalUUID &,
@@ -232,18 +250,24 @@ void CostmapGeneratorNode::handleAccepted(
   const std::shared_ptr<rclcpp_action::ServerGoalHandle<PlannerCostmapAction>>
   goal_handle)
 {
-  setGeneratingState();
+  
 
   goal_handle_ = goal_handle;
 
-  auto map_request = std::make_shared<HADMapService::Request>(
-    createMapRequest(goal_handle_->get_goal()->route));
+  // const rclcpp::Time msg_stamp{goal_handle_->get_goal()->route.header.stamp.sec, goal_handle_->get_goal()->route.header.stamp.nanosec};//rmflag
+  // const auto earliest_time = msg_stamp - kMaxLidarEgoStateStampDiff;
+  // const auto latest_time = msg_stamp + kMaxLidarEgoStateStampDiff;
+  // const auto matched_msgs = m_predict_objects_cache->getInterval(earliest_time, latest_time);
+  // if (matched_msgs.empty()) {
+  //   RCLCPP_WARN(get_logger(), "No matching predicted objects msgs received");
+  //   return;
+  // }
+  //*(m_predict_objects_cache->cache_[0].getMessage())
 
-  // TODO(kielczykowski-rai): replace it with synchronized implementation
-  auto result = map_client_->async_send_request(
-    map_request, std::bind(&CostmapGeneratorNode::mapResponse, this, std::placeholders::_1));
+  setGeneratingState();
+  // mapResponse();
 
-  RCLCPP_INFO(get_logger(), "Requested HAD map.");
+  
 }
 
 HADMapService::Request CostmapGeneratorNode::createMapRequest(

@@ -37,7 +37,7 @@ def generate_launch_description():
             ),
         ],
         remappings=[
-            ('~/client/HAD_Map_Service', '/had_maps/HAD_Map_Service')
+            ('predicted_objects', '/prediction/predicted_objects')
         ]
     )
 

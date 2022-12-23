@@ -61,6 +61,17 @@ def get_lexus_robot_description(filename):
 
 
 def generate_launch_description():
+    autoware_launch_pkg_prefix = get_package_share_directory('autoware_auto_launch')
+
+    costmap_generator_param_file = os.path.join(
+        autoware_launch_pkg_prefix, 'param/costmap_generator.param.yaml')
+
+    costmap_generator_param = DeclareLaunchArgument(
+        'costmap_generator_param_file',
+        default_value=costmap_generator_param_file,
+        description='Path to parameter file for costmap generator'
+    )
+
     #"/localization/goal_pose"
     #"/localization/cur_pose"
     #"/localization/init_gps"
@@ -173,13 +184,30 @@ def generate_launch_description():
         ],
     )
 
+    #
+    costmap_generator = Node(
+        package='costmap_generator_nodes',
+        executable='costmap_generator_node_exe',
+        name='costmap_generator_node',
+        namespace='planning',
+        output='screen',
+        parameters=[
+            LaunchConfiguration('costmap_generator_param_file'),
+        ],
+        remappings=[
+            ('predicted_objects', '/prediction/predicted_objects')
+        ]
+    )
+
     return launch.LaunchDescription([
+        costmap_generator_param,
         eskf_runner,
         euclidean_cluster_node_runner,
         ray_ground_runner,
         filter_transform_front_runner,
         multi_object_tracker,
         prediction,
+        costmap_generator,
         single_camera_robot_state_publisher_runner,
         rviz_runner,
     ])

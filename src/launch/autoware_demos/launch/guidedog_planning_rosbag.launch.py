@@ -110,23 +110,23 @@ def generate_launch_description():
     # Nodes
     ###############################
     
-    # #"/localization/goal_pose"
-    # #"/localization/cur_pose"
-    # #"/localization/init_gps"
-    # eskf_runner = Node(
-    #     package='eskf',
-    #     executable='eskf_node',
-    #     namespace='localization',
-    #     parameters=[{
-    #         'mode': 0,
-    #         'debug': False,
-    #      }],
-    #     remappings=[
-    #         ("imu1", "/imu1"),
-    #         ("odom", "/odom"),
-    #         ("gps", "/gps")
-    #     ]
-    # )
+    #"/localization/goal_pose"
+    #"/localization/cur_pose"
+    #"/localization/init_gps"
+    eskf_runner = Node(
+        package='eskf',
+        executable='eskf_node',
+        namespace='localization',
+        parameters=[{
+            'mode': 0,
+            'debug': False,
+         }],
+        remappings=[
+            ("imu1", "/imu1"),
+            ("odom", "/odom"),
+            ("gps", "/gps")
+        ]
+    )
     
     #/planning/global_path
     gaode_api_global_planner_node_runner = Node(
@@ -194,7 +194,7 @@ def generate_launch_description():
         costmap_generator_param,
         freespace_planner_param,
         behavior_planner_param,
-        # eskf_runner,
+        eskf_runner,
         gaode_api_global_planner_node_runner,
         costmap_generator,
         freespace_planner,
