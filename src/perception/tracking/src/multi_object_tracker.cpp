@@ -60,8 +60,8 @@ bool is_gravity_aligned(const geometry_msgs::msg::Quaternion & quat)
   // Check that the transformation is still roughly 2D, i.e. does not have substantial pitch and
   // roll. That means that either the rotation angle is small, or the rotation axis is
   // approximately equal to the z axis.
-  constexpr float64_t kAngleThresh = 0.7;  // rad
-  constexpr float64_t kAxisTiltThresh = 0.7;  // rad
+  constexpr float64_t kAngleThresh = 0.1;  // rad
+  constexpr float64_t kAxisTiltThresh = 0.1;  // rad
   // rotation angle small
   // ⇔ |θ| <= kAngleThresh  (angles are assumed to be between -π and π)
   // ⇔ cos(θ/2) => std::cos(kAngleThresh/2)
@@ -360,10 +360,10 @@ TrackerUpdateStatus MultiObjectTracker<TrackCreatorT>::validate(
   if (!is_gravity_aligned(detection_frame_odometry.pose.pose.orientation)) {
     return TrackerUpdateStatus::FrameNotGravityAligned;
   }
-  Could also validate
-  * classes
-  * object shapes
-  * detection poses are gravity aligned
+  // Could also validate
+  // * classes
+  // * object shapes
+  // * detection poses are gravity aligned
   return TrackerUpdateStatus::Ok;
 }
 

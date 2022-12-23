@@ -1,4 +1,4 @@
 /**:
   ros__parameters:
-    time_step_ms: 23
-    time_horizon_ms: 2300
+    time_step_ms: 10
+    time_horizon_ms: 200

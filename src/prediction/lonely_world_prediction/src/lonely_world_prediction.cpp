@@ -40,6 +40,17 @@ void predict_stationary(
   predicted_path.path =
     decltype(predicted_path.path) {n_steps, predicted_object.kinematics.initial_pose.pose};
   predicted_path.confidence = 1.0;
+
+  //linear prediction
+  if (!predicted_object.kinematics.initial_stationary)
+  {
+    for(size_t i=0U; i<predicted_path.path.size(); i++){
+      predicted_path.path.at(0).position.x += static_cast<double>(i) * predicted_object.kinematics.initial_twist.twist.linear.x;
+      predicted_path.path.at(0).position.y += static_cast<double>(i) * predicted_object.kinematics.initial_twist.twist.linear.y;
+    }
+  }
+  
+
   predicted_path.time_step = time_utils::to_message(parameters.time_step());
 
   predicted_object.kinematics.predicted_paths.emplace_back(std::move(predicted_path));

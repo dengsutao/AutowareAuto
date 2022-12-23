@@ -231,6 +231,15 @@ const TrackedObject::TrackedObjectMsg & TrackedObject::msg()
     m_ekf.state().index_of<Y_VELOCITY>());
   m_msg.classification = m_classifier.object_classification_vector();
   // TODO(nikolai.morin): Set is_stationary etc.
+
+  double v2 = m_msg.kinematics.twist.twist.linear.x*m_msg.kinematics.twist.twist.linear.x + m_msg.kinematics.twist.twist.linear.y*m_msg.kinematics.twist.twist.linear.y;
+  double a2 = m_msg.kinematics.acceleration.accel.linear.x*m_msg.kinematics.acceleration.accel.linear.x + m_msg.kinematics.acceleration.accel.linear.y*m_msg.kinematics.acceleration.accel.linear.y;
+
+  if (v2 < 0.3 && a2<0.3){
+    m_msg.kinematics.is_stationary = true;
+  } else { 
+    m_msg.kinematics.is_stationary = false;
+  }
   return m_msg;
 }
 

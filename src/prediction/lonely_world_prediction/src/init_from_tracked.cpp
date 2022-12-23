@@ -104,7 +104,8 @@ autoware_auto_perception_msgs::msg::PredictedObjectKinematics from_tracked(
          .initial_pose(make_pose(tracked))
          .initial_twist(tracked.twist)
          .initial_acceleration(tracked.acceleration)
-         .predicted_paths({});
+         .predicted_paths({})
+         .initial_stationary(tracked.is_stationary);
 }
 
 }  // namespace prediction
