@@ -88,6 +88,8 @@ void fillPolygonAreas(
     cv_polygons.push_back(cv_polygon);
     cv::fillPoly(filled_image, cv_polygons, cv::Scalar(in_fill_color));
 
+    // cv::imwrite("/home/a/Downloads/1/grid.jpg", filled_image);
+
     merged_filled_image &= filled_image;
   }
 

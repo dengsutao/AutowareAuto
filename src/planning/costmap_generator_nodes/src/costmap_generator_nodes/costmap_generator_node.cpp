@@ -206,7 +206,7 @@ CostmapGeneratorNode::CostmapGeneratorNode(const rclcpp::NodeOptions & node_opti
 
   // Publishers
   debug_occupancy_grid_publisher_ =
-    this->create_publisher<nav_msgs::msg::OccupancyGrid>("~/debug/occupancy_grid", 1);
+    this->create_publisher<nav_msgs::msg::OccupancyGrid>("/debug/occupancy_grid", 1);
   debug_local_had_map_publisher_ =
     this->create_publisher<visualization_msgs::msg::MarkerArray>("~/debug/local_had_map", 1);
 

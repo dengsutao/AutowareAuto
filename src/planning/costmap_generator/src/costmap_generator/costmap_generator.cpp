@@ -151,11 +151,14 @@ void CostmapGenerator::loadParkingAreasFromLaneletMap(const lanelet::LaneletMapP
 void CostmapGenerator::loadRoadAreasFromObjects(const POMsg & predictedobjects)
 {
   for (const auto & object : predictedobjects.objects) {
-    auto road_poly = object.shape.at(0).polygon;
-    area_points_.push_back(objectpoly2vector(road_poly, 
+    if(object.kinematics.initial_stationary){
+      auto road_poly = object.shape.at(0).polygon;
+      area_points_.push_back(objectpoly2vector(road_poly, 
                                              object.kinematics.initial_pose.pose.position.x, 
                                              object.kinematics.initial_pose.pose.position.y,
                                              object.kinematics.initial_pose.pose.position.z));
+    }
+    
   }
 }
 

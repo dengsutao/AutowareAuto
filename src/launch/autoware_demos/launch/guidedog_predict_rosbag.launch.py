@@ -164,7 +164,7 @@ def generate_launch_description():
     examples_pkg_path = get_package_share_directory(
         'autoware_demos')
     rviz_cfg_path = os.path.join(examples_pkg_path, 'rviz2',
-                                 'object_tracking_single_camera.rviz')
+                                 'guide_dog_predict.rviz')
     rviz_runner = Node(
         package='rviz2',
         executable='rviz2',
