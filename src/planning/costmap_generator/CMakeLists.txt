@@ -31,16 +31,16 @@ autoware_set_compile_options(${COSTMAP_GENERATOR_LIB})
 # skipping Werrors from external `grid_map_cv` package
 target_compile_options(${COSTMAP_GENERATOR_LIB} PRIVATE -Wno-old-style-cast -Wno-sign-conversion -Wno-conversion -Wno-double-conversion -Wno-double-promotion)
 
-if(BUILD_TESTING)
-  # run linters
-  find_package(ament_lint_auto REQUIRED)
-  ament_lint_auto_find_test_dependencies()
+# if(BUILD_TESTING)
+#   # run linters
+#   find_package(ament_lint_auto REQUIRED)
+#   ament_lint_auto_find_test_dependencies()
 
-  # Unit tests
-  find_package(ament_cmake_gtest REQUIRED)
-  ament_add_gtest(${COSTMAP_GENERATOR_LIB}_test test/test_costmap_generator.cpp TIMEOUT 100)
-  autoware_set_compile_options(${COSTMAP_GENERATOR_LIB}_test)
-  target_link_libraries(${COSTMAP_GENERATOR_LIB}_test ${COSTMAP_GENERATOR_LIB})
-endif()
+#   # Unit tests
+#   find_package(ament_cmake_gtest REQUIRED)
+#   ament_add_gtest(${COSTMAP_GENERATOR_LIB}_test test/test_costmap_generator.cpp TIMEOUT 100)
+#   autoware_set_compile_options(${COSTMAP_GENERATOR_LIB}_test)
+#   target_link_libraries(${COSTMAP_GENERATOR_LIB}_test ${COSTMAP_GENERATOR_LIB})
+# endif()
 
 ament_auto_package(INSTALL_TO_SHARE)

@@ -146,7 +146,7 @@ namespace planning
 namespace costmap_generator
 {
 constexpr std::int64_t kDefaultPoHistoryDepth{5};
-constexpr std::chrono::milliseconds kMaxLidarEgoStateStampDiff{100};
+constexpr std::chrono::milliseconds kMaxLidarEgoStateStampDiff{10000000};
 CostmapGeneratorNode::CostmapGeneratorNode(const rclcpp::NodeOptions & node_options)
 : Node("costmap_generator_node", node_options),
   tf_buffer_(this->get_clock()),
@@ -221,9 +221,22 @@ CostmapGeneratorNode::CostmapGeneratorNode(const rclcpp::NodeOptions & node_opti
 
 void CostmapGeneratorNode::predict_callback(const POMsg::ConstSharedPtr po)
 {
+  RCLCPP_INFO(get_logger(), "m_predict_objects_cache.");
   m_predict_objects_cache->add(po);
 }
 
+// Get msg closest to the given timestamp from the list of messages
+template<typename T>
+T get_closest_match(const std::vector<T> & matched_msgs, const rclcpp::Time & stamp)
+{
+  return *std::min_element(
+    matched_msgs.begin(), matched_msgs.end(), [&stamp](const auto &
+    a, const auto & b) {
+      const rclcpp::Time t1(a->header.stamp);
+      const rclcpp::Time t2(b->header.stamp);
+      return std::abs((t1 - stamp).nanoseconds()) < std::abs((t2 - stamp).nanoseconds());
+    });
+}
 
 rclcpp_action::GoalResponse CostmapGeneratorNode::handleGoal(
   const rclcpp_action::GoalUUID &,
@@ -254,20 +267,19 @@ void CostmapGeneratorNode::handleAccepted(
 
   goal_handle_ = goal_handle;
 
-  // const rclcpp::Time msg_stamp{goal_handle_->get_goal()->route.header.stamp.sec, goal_handle_->get_goal()->route.header.stamp.nanosec};//rmflag
-  // const auto earliest_time = msg_stamp - kMaxLidarEgoStateStampDiff;
-  // const auto latest_time = msg_stamp + kMaxLidarEgoStateStampDiff;
-  // const auto matched_msgs = m_predict_objects_cache->getInterval(earliest_time, latest_time);
-  // if (matched_msgs.empty()) {
-  //   RCLCPP_WARN(get_logger(), "No matching predicted objects msgs received");
-  //   return;
-  // }
+  const rclcpp::Time msg_stamp{goal_handle_->get_goal()->route.header.stamp.sec, goal_handle_->get_goal()->route.header.stamp.nanosec};//rmflag
+  const auto earliest_time = msg_stamp - kMaxLidarEgoStateStampDiff;
+  const auto latest_time = msg_stamp + kMaxLidarEgoStateStampDiff;
+  const auto matched_msgs = m_predict_objects_cache->getInterval(earliest_time, latest_time);
+  if (matched_msgs.empty()) {
+    RCLCPP_WARN(get_logger(), "No matching predicted objects msgs received");
+    return;
+  }
   //*(m_predict_objects_cache->cache_[0].getMessage())
+  //const MConstPtr & message = evt.getMessage();
 
-  setGeneratingState();
-  // mapResponse();
-
-  
+  const POMsg::ConstSharedPtr po_msg = get_closest_match(matched_msgs, goal_handle_->get_goal()->route.header.stamp);
+  poResponse(*po_msg);
 }
 
 HADMapService::Request CostmapGeneratorNode::createMapRequest(
@@ -308,14 +320,15 @@ grid_map::Position CostmapGeneratorNode::getCostmapToVehicleTranslation()
   return grid_map::Position(tf.transform.translation.x, tf.transform.translation.y);
 }
 
-void CostmapGeneratorNode::mapResponse(
-  rclcpp::Client<HADMapService>::SharedFuture future)
+void CostmapGeneratorNode::poResponse(
+  const POMsg & predictedobjects)
 {
-  RCLCPP_INFO(get_logger(), "Received HAD map.");
+  RCLCPP_INFO(get_logger(), "Received predicted objects.");
+  RCLCPP_INFO(get_logger(), predictedobjects.header.frame_id);
 
-  // Create Lanelet2 map
-  auto lanelet_map_ptr = std::make_shared<lanelet::LaneletMap>();
-  autoware::common::had_map_utils::fromBinaryMsg(future.get()->map, lanelet_map_ptr);
+  // // Create Lanelet2 map
+  // auto lanelet_map_ptr = std::make_shared<lanelet::LaneletMap>();
+  // autoware::common::had_map_utils::fromBinaryMsg(future.get()->map, lanelet_map_ptr);
 
   // Find translation from grid map to robots center position
   grid_map::Position vehicle_to_grid_position;
@@ -336,10 +349,9 @@ void CostmapGeneratorNode::mapResponse(
     RCLCPP_ERROR(this->get_logger(), "Map to costmmap transform lookup failure: %s", ex.what());
     return;
   }
-
+  
   // Generate costmap
-  auto costmap = costmap_generator_->generateCostmap(
-    lanelet_map_ptr, vehicle_to_grid_position, costmap_to_map_transform);
+  auto costmap = costmap_generator_->generateCostmap(predictedobjects, vehicle_to_grid_position, costmap_to_map_transform);
 
   // Create result
   auto result = std::make_shared<PlannerCostmapAction::Result>();
@@ -348,8 +360,8 @@ void CostmapGeneratorNode::mapResponse(
   result->costmap = out_occupancy_grid;
 
   // Publish visualizations
-  auto map_marker_array = createLaneletVisualization(lanelet_map_ptr);
-  debug_local_had_map_publisher_->publish(map_marker_array);
+  // auto map_marker_array = createLaneletVisualization(lanelet_map_ptr);
+  // debug_local_had_map_publisher_->publish(map_marker_array);
   debug_occupancy_grid_publisher_->publish(out_occupancy_grid);
 
   goal_handle_->succeed(result);

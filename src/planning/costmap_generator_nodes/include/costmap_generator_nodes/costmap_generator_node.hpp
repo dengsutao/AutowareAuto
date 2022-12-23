@@ -147,6 +147,8 @@ private:
   /// \brief callback for HAD map that composes costmap and successes action
   void mapResponse(rclcpp::Client<HADMapService>::SharedFuture future);
 
+  void poResponse(const POMsg & predictedobjects);
+
   /// \brief publish visualization of received part of the HAD map
   void publishLaneletVisualization(std::shared_ptr<lanelet::LaneletMap> & map);
 

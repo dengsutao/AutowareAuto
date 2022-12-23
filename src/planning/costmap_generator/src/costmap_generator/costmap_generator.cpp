@@ -51,6 +51,7 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+#include <fstream>
 
 #include "tf2/utils.h"
 
@@ -71,6 +72,20 @@ std::vector<geometry_msgs::msg::Point> poly2vector(const geometry_msgs::msg::Pol
     p.x = p32.x;
     p.y = p32.y;
     p.z = p32.z;
+    ps.push_back(p);
+  }
+  return ps;
+}
+
+// Convert from Point32 to Point
+std::vector<geometry_msgs::msg::Point> objectpoly2vector(const geometry_msgs::msg::Polygon & poly, double cx, double cy, double cz)
+{
+  std::vector<geometry_msgs::msg::Point> ps;
+  for (const auto & p32 : poly.points) {
+    geometry_msgs::msg::Point p;
+    p.x = p32.x + cx;
+    p.y = p32.y + cy;
+    p.z = p32.z + cz;
     ps.push_back(p);
   }
   return ps;
@@ -105,10 +120,11 @@ CostmapGenerator::CostmapGenerator(const CostmapGeneratorParams & generator_para
   costmap_.add(LayerName::COMBINED, params_.grid_min_value);
 }
 
-void CostmapGenerator::loadDrivableAreasFromLaneletMap(lanelet::LaneletMapPtr lanelet_ptr)
+void CostmapGenerator::loadDrivableAreasFromLaneletMap(const POMsg & predictedobjects)
 {
-  loadRoadAreasFromLaneletMap(lanelet_ptr);
-  loadParkingAreasFromLaneletMap(lanelet_ptr);
+  // loadRoadAreasFromLaneletMap(lanelet_ptr);
+  // loadParkingAreasFromLaneletMap(lanelet_ptr);
+  loadRoadAreasFromObjects(predictedobjects);
 }
 
 void CostmapGenerator::loadParkingAreasFromLaneletMap(const lanelet::LaneletMapPtr lanelet_map)
@@ -132,6 +148,17 @@ void CostmapGenerator::loadParkingAreasFromLaneletMap(const lanelet::LaneletMapP
   }
 }
 
+void CostmapGenerator::loadRoadAreasFromObjects(const POMsg & predictedobjects)
+{
+  for (const auto & object : predictedobjects.objects) {
+    auto road_poly = object.shape.at(0).polygon;
+    area_points_.push_back(objectpoly2vector(road_poly, 
+                                             object.kinematics.initial_pose.pose.position.x, 
+                                             object.kinematics.initial_pose.pose.position.y,
+                                             object.kinematics.initial_pose.pose.position.z));
+  }
+}
+
 void CostmapGenerator::loadRoadAreasFromLaneletMap(const lanelet::LaneletMapPtr lanelet_map)
 {
   auto road_lanelets = autoware::common::had_map_utils::getConstLaneletLayer(lanelet_map);
@@ -143,24 +170,35 @@ void CostmapGenerator::loadRoadAreasFromLaneletMap(const lanelet::LaneletMapPtr 
 }
 
 grid_map::GridMap CostmapGenerator::generateCostmap(
-  lanelet::LaneletMapPtr lanelet_ptr, const grid_map::Position & vehicle_to_grid_position,
+  const POMsg & predictedobjects, const grid_map::Position & vehicle_to_grid_position,
   const geometry_msgs::msg::TransformStamped & map_to_costmap_transform)
 {
   // Clear data points
   area_points_.clear();
 
   // Supply Lanelet map to costmap generator
-  loadDrivableAreasFromLaneletMap(lanelet_ptr);
+  loadDrivableAreasFromLaneletMap(predictedobjects);
 
   // Move grid map with data to robot's center position
   costmap_.setPosition(vehicle_to_grid_position);
 
   // Apply lanelet2 info to costmap
-  if (params_.use_wayarea) {
-    costmap_[LayerName::WAYAREA] = generateWayAreaCostmap(map_to_costmap_transform);
-  }
+  costmap_[LayerName::WAYAREA] = generateWayAreaCostmap(map_to_costmap_transform);
 
   costmap_[LayerName::COMBINED] = generateCombinedCostmap();
+
+  
+  // std::ofstream file("/home/a/Downloads/1/COMBINED0.txt");
+  // if (file.is_open())
+  // {
+  //   file << "Here is the matrix m:\n" << costmap_[LayerName::COMBINED] << '\n';
+  // }
+
+  // std::ofstream file2("/home/a/Downloads/1/WAYAREA0.txt");
+  // if (file2.is_open())
+  // {
+  //   file2 << "Here is the matrix m:\n" << costmap_[LayerName::WAYAREA] << '\n';
+  // }
 
   auto result = costmap_;
 

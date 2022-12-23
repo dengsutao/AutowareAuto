@@ -64,6 +64,8 @@
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
+#include <autoware_auto_perception_msgs/msg/predicted_objects.hpp>
+
 #include <memory>
 #include <string>
 #include <tuple>
@@ -75,6 +77,8 @@ namespace planning
 {
 namespace costmap_generator
 {
+using POMsg = autoware_auto_perception_msgs::msg::PredictedObjects;
+
 /// \brief Struct holding costmap layer names
 struct COSTMAP_GENERATOR_PUBLIC LayerName
 {
@@ -122,7 +126,7 @@ public:
   ///                                     lanelet polygon points when marking driveable areas
   /// \return Generated costmap
   grid_map::GridMap generateCostmap(
-    lanelet::LaneletMapPtr lanelet_ptr, const grid_map::Position & vehicle_to_grid_position,
+    const POMsg & predictedobjects, const grid_map::Position & vehicle_to_grid_position,
     const geometry_msgs::msg::TransformStamped & map_to_costmap_transform);
 
 private:
@@ -131,7 +135,9 @@ private:
   std::vector<std::vector<geometry_msgs::msg::Point>> area_points_;
 
   /// \brief Fills costmap data according to given lanelet roads and parking areas
-  void loadDrivableAreasFromLaneletMap(lanelet::LaneletMapPtr lanelet_ptr);
+  void loadDrivableAreasFromLaneletMap(const POMsg & predictedobjects);
+
+  void loadRoadAreasFromObjects(const POMsg & predictedobjects);
 
   /// \brief Find bounding box for all received lanelet polygons
   std::tuple<grid_map::Position, grid_map::Position> calculateAreaPointsBoundingBox() const;
