@@ -6,10 +6,10 @@
     ekf_noise_variance: 3.0
     # Time after which to remove unseen tracks.
     # Note also the pruning_ticks_threshold – only one threshold is necessary for removal.
-    pruning_time_threshold_ms: 500
+    pruning_time_threshold_ms: 2000
     # Number of observations to remove unseen tracks.
     # Note also the pruning_time_threshold_ms – only one threshold is necessary for removal.
-    pruning_ticks_threshold: 10
+    pruning_ticks_threshold: 20
     # Frame id in which tracks should be produced
     track_frame_id: map
     # Parameters for associating the lidar detections
