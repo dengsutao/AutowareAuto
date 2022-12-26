@@ -240,11 +240,12 @@ void EuclideanClusterNode::handle_clusters(
   } else {
     boxes = euclidean_cluster::details::compute_bounding_boxes(
       clusters_out, BboxMethod::Eigenbox,
-      m_use_z);
+      m_use_z, true, m_cluster_alg.get_filter_config());
   }
 
   if (m_box_pub_ptr) {
-    boxes.header.stamp = header.stamp;
+    //boxes.header.stamp = header.stamp;
+    boxes.header.stamp = get_clock()->now();
     boxes.header.frame_id = header.frame_id;
     m_box_pub_ptr->publish(boxes);
   }

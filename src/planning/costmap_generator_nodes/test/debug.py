@@ -185,10 +185,10 @@ def generate_test_description():
 
 
 class TestBasicUsage(unittest.TestCase):
-    def test_basic_case_works(self, costmap_generator_node):
+    def test_basic_case_works(self):
         rclpy.init()
 
-        # had_map_service = HADMapServiceMock()
+        had_map_service = HADMapServiceMock()
 
         generate_costmap_client = GenerateCostmapClientMock()
 
@@ -208,18 +208,17 @@ class TestBasicUsage(unittest.TestCase):
         goal.route.goal_pose.position.x = 11.0
         goal.route.goal_pose.position.y = 12.5
         
-        while(True):
-            generate_costmap_client.send_goal(goal)
-            print('finish goal send.')
+        generate_costmap_client.send_goal(goal)
+        print('finish goal send.')
 
-        # while not generate_costmap_client._result:
-        #     print('wait for result.')
-        #     # rclpy.spin_once(had_map_service)
-        #     time.sleep(0.1)
+        while not generate_costmap_client._result:
+            print('wait for result.')
+            rclpy.spin_once(had_map_service)
+            time.sleep(0.1)
 
-        # result = generate_costmap_client._result
+        result = generate_costmap_client._result
 
-        # print('results received.')
+        print('results received.')
 
         # # configured values
         # self.assertEqual(result.costmap.header.frame_id, "map")
@@ -237,16 +236,16 @@ class TestBasicUsage(unittest.TestCase):
         return
 
 if __name__ == '__main__':
-    costmap_generator_node = launch_ros.actions.Node(
-        package='costmap_generator_nodes',
-        executable='costmap_generator_node_exe',
-        parameters=[os.path.join(
-            get_package_share_directory('costmap_generator_nodes'),
-            'param/test.param.yaml'
-        )],
-        remappings=[
-            ('~/client/HAD_Map_Service', '/HAD_Map_Service')
-        ]
-    )
+    # costmap_generator_node = launch_ros.actions.Node(
+    #     package='costmap_generator_nodes',
+    #     executable='costmap_generator_node_exe',
+    #     parameters=[os.path.join(
+    #         get_package_share_directory('costmap_generator_nodes'),
+    #         'param/test.param.yaml'
+    #     )],
+    #     remappings=[
+    #         ('~/client/HAD_Map_Service', '/HAD_Map_Service')
+    #     ]
+    # )
     tbu = TestBasicUsage()
-    tbu.test_basic_case_works(costmap_generator_node)
+    tbu.test_basic_case_works()

@@ -9,7 +9,7 @@
     use_box: True
     max_cloud_size: 55000
     downsample: True
-    use_lfit: True
+    use_lfit: False
     use_z: True
     filter_output_by_size: True
     cluster:

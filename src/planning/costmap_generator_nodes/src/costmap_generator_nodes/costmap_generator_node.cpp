@@ -145,8 +145,8 @@ namespace planning
 {
 namespace costmap_generator
 {
-constexpr std::int64_t kDefaultPoHistoryDepth{5};
-constexpr std::chrono::milliseconds kMaxLidarEgoStateStampDiff{10000000};
+constexpr std::int64_t kDefaultPoHistoryDepth{15};
+constexpr std::chrono::milliseconds kMaxLidarEgoStateStampDiff{1000};
 CostmapGeneratorNode::CostmapGeneratorNode(const rclcpp::NodeOptions & node_options)
 : Node("costmap_generator_node", node_options),
   tf_buffer_(this->get_clock()),
@@ -221,7 +221,7 @@ CostmapGeneratorNode::CostmapGeneratorNode(const rclcpp::NodeOptions & node_opti
 
 void CostmapGeneratorNode::predict_callback(const POMsg::ConstSharedPtr po)
 {
-  RCLCPP_INFO(get_logger(), "m_predict_objects_cache.");
+  //RCLCPP_INFO(get_logger(), "m_predict_objects_cache.");
   m_predict_objects_cache->add(po);
 }
 
@@ -324,7 +324,6 @@ void CostmapGeneratorNode::poResponse(
   const POMsg & predictedobjects)
 {
   RCLCPP_INFO(get_logger(), "Received predicted objects.");
-  RCLCPP_INFO(get_logger(), predictedobjects.header.frame_id);
 
   // // Create Lanelet2 map
   // auto lanelet_map_ptr = std::make_shared<lanelet::LaneletMap>();

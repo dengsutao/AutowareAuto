@@ -195,6 +195,7 @@ def generate_launch_description():
         ],
         remappings=[
             ('predicted_objects', '/prediction/predicted_objects')
+            # ('predicted_objects', '/prediction/lidar_polygon_prisms')
         ]
     )
 

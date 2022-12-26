@@ -4,6 +4,7 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
+        - /PointCloud21
         - /TrackedObjects1/CAR1
         - /TrackedObjects1/TRUCK1
         - /TrackedObjects1/TRAILER1
@@ -69,7 +70,7 @@ Visualization Manager:
       Position Transformer: XYZ
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.15000000596046448
+      Size (m): 0.07000000029802322
       Style: Flat Squares
       Topic:
         Depth: 5
@@ -91,11 +92,7 @@ Visualization Manager:
           Value: true
         lidar_front:
           Value: true
-        map:
-          Value: true
         nav_base:
-          Value: true
-        odom:
           Value: true
       Marker Scale: 1
       Name: TF
@@ -109,10 +106,6 @@ Visualization Manager:
               {}
           nav_base:
             {}
-        map:
-          {}
-        odom:
-          {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -252,7 +245,7 @@ Visualization Manager:
         Color: 0; 0; 230
       Name: DetectedObjects
       Namespaces:
-        "": true
+        {}
       PEDESTRIAN:
         Alpha: 0.699999988079071
         Color: 220; 20; 60
