@@ -188,7 +188,7 @@ class TestBasicUsage(unittest.TestCase):
     def test_basic_case_works(self, costmap_generator_node):
         rclpy.init()
 
-        had_map_service = HADMapServiceMock()
+        # had_map_service = HADMapServiceMock()
 
         generate_costmap_client = GenerateCostmapClientMock()
 
@@ -208,30 +208,31 @@ class TestBasicUsage(unittest.TestCase):
         goal.route.goal_pose.position.x = 11.0
         goal.route.goal_pose.position.y = 12.5
         
-        generate_costmap_client.send_goal(goal)
-        print('finish goal send.')
+        while(True):
+            generate_costmap_client.send_goal(goal)
+            print('finish goal send.')
 
-        while not generate_costmap_client._result:
-            print('wait for result.')
-            rclpy.spin_once(had_map_service)
-            time.sleep(0.1)
+        # while not generate_costmap_client._result:
+        #     print('wait for result.')
+        #     # rclpy.spin_once(had_map_service)
+        #     time.sleep(0.1)
 
-        result = generate_costmap_client._result
+        # result = generate_costmap_client._result
 
-        print('results received.')
+        # print('results received.')
 
-        # configured values
-        self.assertEqual(result.costmap.header.frame_id, "map")
-        self.assertTrue(abs(result.costmap.info.resolution - 0.2) < 0.001)
+        # # configured values
+        # self.assertEqual(result.costmap.header.frame_id, "map")
+        # self.assertTrue(abs(result.costmap.info.resolution - 0.2) < 0.001)
 
-        # non-zero dimensions and non-empty data
-        self.assertTrue(result.costmap.info.width > 0)
-        self.assertTrue(result.costmap.info.height > 0)
-        self.assertTrue(len(result.costmap.data) > 0)
+        # # non-zero dimensions and non-empty data
+        # self.assertTrue(result.costmap.info.width > 0)
+        # self.assertTrue(result.costmap.info.height > 0)
+        # self.assertTrue(len(result.costmap.data) > 0)
 
-        # trimmed size - it means smaller than configured
-        self.assertTrue(result.costmap.info.width < 70)
-        self.assertTrue(result.costmap.info.height < 70)
+        # # trimmed size - it means smaller than configured
+        # self.assertTrue(result.costmap.info.width < 70)
+        # self.assertTrue(result.costmap.info.height < 70)
 
         return
 

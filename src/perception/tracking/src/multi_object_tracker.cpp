@@ -55,29 +55,29 @@ using autoware_auto_perception_msgs::msg::DetectedObjectKinematics;
 using nav_msgs::msg::Odometry;
 using TrackedObjectsMsg = autoware_auto_perception_msgs::msg::TrackedObjects;
 
-bool is_gravity_aligned(const geometry_msgs::msg::Quaternion & quat)
-{
-  // Check that the transformation is still roughly 2D, i.e. does not have substantial pitch and
-  // roll. That means that either the rotation angle is small, or the rotation axis is
-  // approximately equal to the z axis.
-  constexpr float64_t kAngleThresh = 0.1;  // rad
-  constexpr float64_t kAxisTiltThresh = 0.1;  // rad
-  // rotation angle small
-  // ⇔ |θ| <= kAngleThresh  (angles are assumed to be between -π and π)
-  // ⇔ cos(θ/2) => std::cos(kAngleThresh/2)
-  // ⇔ w => std::cos(kAngleThresh/2)
-  if (quat.w < std::cos(0.5 * kAngleThresh)) {
-    // From Wikipedia: (x, y, z) = cos(θ/2) * (u_x, u_y, u_z), where u is the rotation axis.
-    // The cosine of the angle α between the rotation axis and the z axis is the dot product of the
-    // rotation axis u and the the z axis, so cos(α) = u_z.
-    const float64_t u_z = std::abs(quat.z) / std::sqrt(
-      quat.x * quat.x + quat.y * quat.y + quat.z * quat.z);
-    if (u_z < std::cos(kAxisTiltThresh)) {
-      return false;
-    }
-  }
-  return true;
-}
+// bool is_gravity_aligned(const geometry_msgs::msg::Quaternion & quat)
+// {
+//   // Check that the transformation is still roughly 2D, i.e. does not have substantial pitch and
+//   // roll. That means that either the rotation angle is small, or the rotation axis is
+//   // approximately equal to the z axis.
+//   constexpr float64_t kAngleThresh = 0.1;  // rad
+//   constexpr float64_t kAxisTiltThresh = 0.1;  // rad
+//   // rotation angle small
+//   // ⇔ |θ| <= kAngleThresh  (angles are assumed to be between -π and π)
+//   // ⇔ cos(θ/2) => std::cos(kAngleThresh/2)
+//   // ⇔ w => std::cos(kAngleThresh/2)
+//   if (quat.w < std::cos(0.5 * kAngleThresh)) {
+//     // From Wikipedia: (x, y, z) = cos(θ/2) * (u_x, u_y, u_z), where u is the rotation axis.
+//     // The cosine of the angle α between the rotation axis and the z axis is the dot product of the
+//     // rotation axis u and the the z axis, so cos(α) = u_z.
+//     const float64_t u_z = std::abs(quat.z) / std::sqrt(
+//       quat.x * quat.x + quat.y * quat.y + quat.z * quat.z);
+//     if (u_z < std::cos(kAxisTiltThresh)) {
+//       return false;
+//     }
+//   }
+//   return true;
+// }
 
 geometry_msgs::msg::TransformStamped to_transform(const Odometry & odometry)
 {
@@ -357,9 +357,9 @@ TrackerUpdateStatus MultiObjectTracker<TrackCreatorT>::validate(
   if (detection_frame_odometry.header.frame_id != m_options.frame) {
     return TrackerUpdateStatus::TrackerFrameMismatch;
   }
-  if (!is_gravity_aligned(detection_frame_odometry.pose.pose.orientation)) {
-    return TrackerUpdateStatus::FrameNotGravityAligned;
-  }
+  // if (!is_gravity_aligned(detection_frame_odometry.pose.pose.orientation)) {
+  //   return TrackerUpdateStatus::FrameNotGravityAligned;
+  // }
   // Could also validate
   // * classes
   // * object shapes
