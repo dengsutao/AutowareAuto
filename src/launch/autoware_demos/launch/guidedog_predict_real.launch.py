@@ -72,6 +72,56 @@ def generate_launch_description():
         description='Path to parameter file for costmap generator'
     )
 
+    # Sensors
+    imu_gps_runner = Node(
+        package='imu_gps',
+        executable='imu_gps_node',
+        parameters=[{
+            'port': "/dev/imu_gps_usb",
+            'baudrate': 115200,
+            "debug": False
+         }])
+    gps_runner = Node(
+        package='gps',
+        executable='gps_node',
+        parameters=[{
+            'port': "/dev/gps",
+            'baudrate': 9600,
+            "debug": False
+         }])
+    wheel_imu_runner = Node(
+        package='wheel_imu',
+        executable='wheel_imu_node',
+        parameters=[{
+            'debug': False,
+         }])
+
+    hesai_node = Node(
+            package ='hesai_lidar',
+            node_namespace ='hesai',
+            node_executable ='hesai_lidar_node',
+            name ='hesai_node',
+            output ="screen",
+            parameters=[
+                {"pcap_file": ""},
+                {"server_ip"  : "10.81.81.99"},
+                {"lidar_recv_port"  : 2368},
+                {"gps_port"  : 10110},
+                {"start_angle"  : 0.0},
+                {"lidar_type"  : "PandarQT"},
+                {"frame_id"  : "PandarQT"},
+                {"pcldata_type"  : 0},
+                {"publish_type"  : "both"},
+                {"timestamp_type"  : "''"},
+                {"data_type"  : "''"},
+                {"lidar_correction_file"  : "./src/HesaiLidar_General_ROS/config/PandarQT.csv"},
+                {"multicast_ip"  : "''"},
+                {"coordinate_correction_flag"  : False},
+                {"fixed_frame"  : "''"},
+                {"target_frame_frame"  : "''"}
+            ]
+        )
+
     #"/localization/goal_pose"
     #"/localization/cur_pose"
     #"/localization/init_gps"
@@ -90,6 +140,7 @@ def generate_launch_description():
         ]
     )
 
+    # euclidean cluster node execution definition.
     euclidean_cluster_node_runner = Node(
         package='euclidean_cluster_nodes',
         executable='euclidean_cluster_node_exe',
@@ -199,6 +250,10 @@ def generate_launch_description():
     )
 
     return launch.LaunchDescription([
+        imu_gps_runner,
+        gps_runner,
+        wheel_imu_runner,
+        hesai_node,
         costmap_generator_param,
         eskf_runner,
         euclidean_cluster_node_runner,
