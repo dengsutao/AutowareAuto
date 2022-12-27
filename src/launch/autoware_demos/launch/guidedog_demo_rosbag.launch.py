@@ -61,16 +61,59 @@ def get_lexus_robot_description(filename):
 
 
 def generate_launch_description():
+    ###############################
+    # Files
+    ###############################
+    avp_demo_pkg_prefix = get_package_share_directory('autoware_demos')
     autoware_launch_pkg_prefix = get_package_share_directory('autoware_auto_launch')
-
+    
+    vehicle_characteristics_param_file = os.path.join(
+        avp_demo_pkg_prefix, 'param/vehicle_characteristics.param.yaml')
+    vehicle_constants_manager_param_file = os.path.join(
+        autoware_launch_pkg_prefix, 'param/lexus_rx_hybrid_2016.param.yaml')
     costmap_generator_param_file = os.path.join(
         autoware_launch_pkg_prefix, 'param/costmap_generator.param.yaml')
+    freespace_planner_param_file = os.path.join(
+        autoware_launch_pkg_prefix, 'param/freespace_planner.param.yaml')
+    behavior_planner_param_file = os.path.join(
+        autoware_launch_pkg_prefix, 'param/behavior_planner.param.yaml')
+
+    ###############################
+    # Arguments
+    ###############################
+    vehicle_characteristics_param = DeclareLaunchArgument(
+        'vehicle_characteristics_param_file',
+        default_value=vehicle_characteristics_param_file,
+        description='Path to config file for vehicle characteristics'
+    )
+    
+    vehicle_constants_manager_param = DeclareLaunchArgument(
+        'vehicle_constants_manager_param_file',
+        default_value=vehicle_constants_manager_param_file,
+        description='Path to parameter file for vehicle_constants_manager'
+    )
 
     costmap_generator_param = DeclareLaunchArgument(
         'costmap_generator_param_file',
         default_value=costmap_generator_param_file,
         description='Path to parameter file for costmap generator'
     )
+
+    behavior_planner_param = DeclareLaunchArgument(
+        'behavior_planner_param_file',
+        default_value=behavior_planner_param_file,
+        description='Path to parameter file for behavior planner'
+    )
+
+    freespace_planner_param = DeclareLaunchArgument(
+        'freespace_planner_param_file',
+        default_value=freespace_planner_param_file,
+        description='Path to parameter file for freespace_planner'
+    )
+
+    ###############################
+    # Nodes
+    ###############################
 
     #"/localization/goal_pose"
     #"/localization/cur_pose"
@@ -183,7 +226,9 @@ def generate_launch_description():
         ],
     )
 
-    #
+    ###############################
+    # Planning Nodes
+    ###############################
     costmap_generator = Node(
         package='costmap_generator_nodes',
         executable='costmap_generator_node_exe',
@@ -198,8 +243,44 @@ def generate_launch_description():
         ]
     )
 
+    freespace_planner = Node(
+        package='freespace_planner_nodes',
+        executable='freespace_planner_node_exe',
+        name='freespace_planner',
+        namespace='planning',
+        output='screen',
+        parameters=[
+            LaunchConfiguration('freespace_planner_param_file'),
+            LaunchConfiguration('vehicle_constants_manager_param_file')
+        ]
+    )
+
+    behavior_planner = Node(
+        package='behavior_planner_nodes',
+        name='behavior_planner_node',
+        namespace='planning',
+        executable='behavior_planner_node_exe',
+        parameters=[
+            LaunchConfiguration('behavior_planner_param_file'),
+            {'enable_object_collision_estimator': True},
+            LaunchConfiguration('vehicle_characteristics_param_file'),
+        ],
+        output='screen',
+        remappings=[
+            ('HAD_Map_Service', '/had_maps/HAD_Map_Service'),
+            ('vehicle_state', '/localization/cur_pose'),
+            ('route', 'global_path'),
+            ('gear_report', '/vehicle/gear_report'),
+            ('gear_command', '/vehicle/gear_command')
+        ]
+    )
+
     return launch.LaunchDescription([
+        vehicle_characteristics_param,
+        vehicle_constants_manager_param,
         costmap_generator_param,
+        freespace_planner_param,
+        behavior_planner_param,
         eskf_runner,
         euclidean_cluster_node_runner,
         ray_ground_runner,
@@ -208,5 +289,7 @@ def generate_launch_description():
         prediction,
         costmap_generator,
         single_camera_robot_state_publisher_runner,
+        freespace_planner,
+        behavior_planner,
         rviz_runner,
     ])
