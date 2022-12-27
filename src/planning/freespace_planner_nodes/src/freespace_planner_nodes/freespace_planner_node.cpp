@@ -129,10 +129,9 @@ FreespacePlannerNode::FreespacePlannerNode(const rclcpp::NodeOptions & node_opti
 
     auto vehicle_dimension_margin = declare_parameter("vehicle_dimension_margin", 0.0);
     auto vehicle_constants = declare_and_get_vehicle_constants(*this);
-    param.vehicle_shape.length = vehicle_constants.vehicle_length + vehicle_dimension_margin;
-    param.vehicle_shape.width = vehicle_constants.vehicle_width + vehicle_dimension_margin;
-    param.vehicle_shape.cg2back = vehicle_constants.cg_to_rear + vehicle_constants.overhang_rear +
-      (vehicle_dimension_margin / 2.0);
+    param.vehicle_shape.length = vehicle_constants.guide_dog_length + vehicle_dimension_margin;
+    param.vehicle_shape.width = vehicle_constants.guide_dog_width + vehicle_dimension_margin;
+    param.vehicle_shape.cg2back = vehicle_constants.guide_dog_cg2back;
     param.minimum_turning_radius = vehicle_constants.minimum_turning_radius;
 
     param.maximum_turning_radius = declare_parameter("maximum_turning_radius", 6.0);

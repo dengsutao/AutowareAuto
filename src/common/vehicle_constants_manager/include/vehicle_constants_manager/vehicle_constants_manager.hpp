@@ -46,6 +46,9 @@ struct VEHICLE_CONSTANTS_MANAGER_PUBLIC VehicleConstants
   /// @brief Construct a new instance of the measurement from a state vector.
   /// @param[in] wheel_radius Radius of a wheel
   /// @param[in] wheel_width Width of a wheel
+  /// @param[in] guide_dog_width Width of a wheel
+  /// @param[in] guide_dog_length Width of a wheel
+  /// @param[in] guide_dog_cg2back Width of a wheel
   /// @param[in] wheel_base Distance between front and rear axles
   /// @param[in] wheel_tread Distance between centres of left and right wheels
   /// @param[in] overhang_front Distance from front axle to fore-most point of the vehicle
@@ -63,7 +66,7 @@ struct VEHICLE_CONSTANTS_MANAGER_PUBLIC VehicleConstants
   /// @throws std::runtime_error if cg_to_rear is larger than wheel_base (center of gravity must be
   /// within front and rear axles.)
   explicit VehicleConstants(
-    float64_t wheel_radius, float64_t wheel_width, float64_t wheel_base,
+    float64_t wheel_radius, float64_t wheel_width, float64_t guide_dog_width, float64_t guide_dog_length, float64_t guide_dog_cg2back, float64_t wheel_base,
     float64_t wheel_tread, float64_t overhang_front,
     float64_t overhang_rear, float64_t overhang_left,
     float64_t overhang_right, float64_t vehicle_height,
@@ -76,9 +79,17 @@ struct VEHICLE_CONSTANTS_MANAGER_PUBLIC VehicleConstants
   /// @brief [m] Radius of the wheel including the tires
   const float64_t wheel_radius;
 
-  /// @brief [m] Horizontal distance between 2 circular sides of the wheel
+  /// @brief [m] Radius of the wheel including the tires
   const float64_t wheel_width;
 
+  /// @brief [m] Radius of the wheel including the tires
+  const float64_t guide_dog_width;
+
+  /// @brief [m] Horizontal distance between 2 circular sides of the wheel
+  const float64_t guide_dog_length;
+
+  const float64_t  guide_dog_cg2back;
+  
   /// @brief [m] Absolute distance between axis centers of front and rear wheels.
   const float64_t wheel_base;
 

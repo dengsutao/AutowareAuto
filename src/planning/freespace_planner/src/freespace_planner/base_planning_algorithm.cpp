@@ -119,7 +119,10 @@ void BasePlanningAlgorithm::setOccupancyGrid(const nav_msgs::msg::OccupancyGrid 
     for (uint32_t j = 0; j < width; j++) {
       const int cost = costmap_.data[i * width + j];
 
-      if (cost < 0 || planner_common_param_.obstacle_threshold <= cost) {
+      // if (cost < 0 || planner_common_param_.obstacle_threshold <= cost) {
+      //   is_obstacle_table[i][j] = true;
+      // }
+      if (cost <= 0) {
         is_obstacle_table[i][j] = true;
       }
     }

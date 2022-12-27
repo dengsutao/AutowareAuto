@@ -33,6 +33,9 @@ using float64_t = VehicleConstants::float64_t;
 VehicleConstants::VehicleConstants(
   float64_t wheel_radius,
   float64_t wheel_width,
+  float64_t guide_dog_width,
+  float64_t guide_dog_length,
+  float64_t guide_dog_cg2back,
   float64_t wheel_base,
   float64_t wheel_tread,
   float64_t overhang_front,
@@ -48,6 +51,9 @@ VehicleConstants::VehicleConstants(
   float64_t maximum_turning_angle_rad)
 : wheel_radius(wheel_radius),
   wheel_width(wheel_width),
+  guide_dog_width(guide_dog_width),
+  guide_dog_length(guide_dog_length),
+  guide_dog_cg2back(guide_dog_cg2back),
   wheel_base(wheel_base),
   wheel_tread(wheel_tread),
   overhang_front(overhang_front),
@@ -87,6 +93,9 @@ VehicleConstants::VehicleConstants(
     };
   throw_if_negative(wheel_radius, "wheel_radius");
   throw_if_negative(wheel_width, "wheel_width");
+  throw_if_negative(guide_dog_width, "guide_dog_width");
+  throw_if_negative(guide_dog_length, "guide_dog_length");
+  throw_if_negative(guide_dog_cg2back, "guide_dog_cg2back");
   throw_if_negative(wheel_base, "wheel_base");
   throw_if_negative(wheel_tread, "wheel_tread");
   throw_if_negative(overhang_front, "overhang_front");
@@ -105,7 +114,7 @@ VehicleConstants::VehicleConstants(
     throw std::runtime_error(
             "maximum_turning_angle_rad must be positive and cannot be greater than 0.5*PI.");
   }
-  minimum_turning_radius = wheel_base / tan(maximum_turning_angle_rad);
+  minimum_turning_radius = guide_dog_width;
 }
 
 std::string VehicleConstants::str_pretty() const
@@ -146,6 +155,9 @@ VehicleConstants declare_and_get_vehicle_constants(rclcpp::Node & node)
   std::map<std::string, float64_t> params{
     std::make_pair(ns + "wheel_radius", -1.0),
     std::make_pair(ns + "wheel_width", -1.0),
+    std::make_pair(ns + "guide_dog_width", -1.0),
+    std::make_pair(ns + "guide_dog_length", -1.0),
+    std::make_pair(ns + "guide_dog_cg2back", -1.0),
     std::make_pair(ns + "wheel_base", -1.0),
     std::make_pair(ns + "wheel_tread", -1.0),
     std::make_pair(ns + "overhang_front", -1.0),
@@ -176,6 +188,9 @@ VehicleConstants declare_and_get_vehicle_constants(rclcpp::Node & node)
   return VehicleConstants(
     params.at(ns + "wheel_radius"),
     params.at(ns + "wheel_width"),
+    params.at(ns + "guide_dog_width"),
+    params.at(ns + "guide_dog_length"),
+    params.at(ns + "guide_dog_cg2back"),
     params.at(ns + "wheel_base"),
     params.at(ns + "wheel_tread"),
     params.at(ns + "overhang_front"),

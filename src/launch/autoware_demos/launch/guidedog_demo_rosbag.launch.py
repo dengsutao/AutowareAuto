@@ -70,7 +70,7 @@ def generate_launch_description():
     vehicle_characteristics_param_file = os.path.join(
         avp_demo_pkg_prefix, 'param/vehicle_characteristics.param.yaml')
     vehicle_constants_manager_param_file = os.path.join(
-        autoware_launch_pkg_prefix, 'param/lexus_rx_hybrid_2016.param.yaml')
+        autoware_launch_pkg_prefix, 'param/guide_dog_robot.param.yaml')
     costmap_generator_param_file = os.path.join(
         autoware_launch_pkg_prefix, 'param/costmap_generator.param.yaml')
     freespace_planner_param_file = os.path.join(
@@ -280,7 +280,7 @@ def generate_launch_description():
         vehicle_constants_manager_param,
         costmap_generator_param,
         freespace_planner_param,
-        behavior_planner_param,
+        # behavior_planner_param,
         eskf_runner,
         euclidean_cluster_node_runner,
         ray_ground_runner,
@@ -290,6 +290,6 @@ def generate_launch_description():
         costmap_generator,
         single_camera_robot_state_publisher_runner,
         freespace_planner,
-        behavior_planner,
-        rviz_runner,
+        # behavior_planner,
+        # rviz_runner,
     ])

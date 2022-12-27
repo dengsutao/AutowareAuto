@@ -2,7 +2,7 @@
   ros__parameters:
     # -- Node Configurations --
     planning_algorithm: "astar"
-    waypoints_velocity: 5.0
+    waypoints_velocity: 3.0
 
     # -- A* search Configurations --
     # base configs
