@@ -71,6 +71,9 @@ PointCloud2FilterTransformNode::PointCloud2FilterTransformNode(
   m_distance_filter{
     static_cast<float32_t>(declare_parameter("min_radius").get<float64_t>()),
     static_cast<float32_t>(declare_parameter("max_radius").get<float64_t>())},
+  m_distance_z_filter{
+    static_cast<float32_t>(declare_parameter("min_z").get<float64_t>()),
+    static_cast<float32_t>(declare_parameter("max_z").get<float64_t>())},
   m_input_frame_id{declare_parameter("input_frame_id").get<std::string>()},
   m_output_frame_id{declare_parameter("output_frame_id").get<std::string>()},
   m_init_timeout{std::chrono::milliseconds{declare_parameter("init_timeout_ms").get<int32_t>()}},
@@ -211,7 +214,9 @@ const PointCloud2 & PointCloud2FilterTransformNode::filter_and_transform(const P
       auto transformed_point = transform_point(pt);
       transformed_point = transform_point_imu(transformed_point);
       transformed_point.intensity = pt.intensity;
-      modifier.push_back(transformed_point);
+      if (point_z_not_filtered(transformed_point)) {
+        modifier.push_back(transformed_point);
+      }
     }
 
     ++x_it;

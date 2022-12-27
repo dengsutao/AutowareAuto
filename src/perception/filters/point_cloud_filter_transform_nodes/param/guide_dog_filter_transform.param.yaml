@@ -1,0 +1,30 @@
+# config/test.param.yaml
+---
+lidar_front:
+  filter_transform_vlp16_front:
+    ros__parameters:
+      timeout_ms:       110
+      pcl_size:         55000
+      input_frame_id:  "lidar_front"
+      output_frame_id: "base_link"
+      init_timeout_ms:  5000
+      expected_num_subscribers: 1
+      expected_num_publishers:  1
+      start_angle:            0.0       # radians
+      end_angle:              6.28
+      min_radius:             0.1      # metersm, lidar frame
+      max_radius:             30.0
+      max_z:                  2.0      # meters, base link frame
+      min_z:                  -0.5
+      static_transformer:
+      # lidar_front to axis
+        quaternion:
+          x:                    0.158
+          y:                    0.158
+          z:                    0.689
+          w:                    0.689
+        translation:
+          x:                    0.14965
+          y:                    0.0
+          z:                    0.49516
+

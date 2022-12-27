@@ -94,6 +94,16 @@ protected:
   }
 
   template<typename PointType>
+  /// \brief Check if the point is within the specified angle and radius limits
+  /// \tparam PointType type with x, y, z.
+  /// \param pt point with x, y, z
+  /// \return True if the point is within the desired radius and angle limits. False otherwise.
+  bool8_t point_z_not_filtered(const PointType & pt) const
+  {
+    return m_distance_z_filter(pt);
+  }
+
+  template<typename PointType>
   /// \brief Apply static transform to the given point
   /// \tparam PointType type with x, y, z
   /// \param pt point with x, y, z
@@ -120,9 +130,11 @@ protected:
 private:
   using AngleFilter = autoware::common::lidar_utils::AngleFilter;
   using DistanceFilter = autoware::common::lidar_utils::DistanceFilter;
+  using DistanceZFilter = autoware::common::lidar_utils::DistanceZFilter;
   using StaticTransformer = autoware::common::lidar_utils::StaticTransformer;
   AngleFilter m_angle_filter;
   DistanceFilter m_distance_filter;
+  DistanceZFilter m_distance_z_filter;
   const std::string m_input_frame_id;
   const std::string m_output_frame_id;
   std::unique_ptr<StaticTransformer> m_static_transformer;

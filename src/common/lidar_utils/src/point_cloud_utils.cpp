@@ -173,6 +173,13 @@ DistanceFilter::DistanceFilter(float32_t min_radius, float32_t max_radius)
 // odr-used by comp::abs_gte
 constexpr float32_t DistanceFilter::FEPS;
 
+DistanceZFilter::DistanceZFilter(float32_t min_z, float32_t max_z)
+: m_min_z(min_z), m_max_z(max_z)
+{
+  if (m_max_z < m_min_z) {
+    throw std::domain_error("DistanceZFilter: max_z cannot be less than min_z");
+  }
+}
 
 StaticTransformer::StaticTransformer(const geometry_msgs::msg::Transform & tf)
 {

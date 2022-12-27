@@ -227,10 +227,35 @@ public:
     return comp::abs_gte(pt_radius, m_min_r2, FEPS) &&
            comp::abs_lte(pt_radius, m_max_r2, FEPS);
   }
-
 private:
   float32_t m_min_r2;
   float32_t m_max_r2;
+};
+
+/// \brief Filter class to check if a point lies within a range defined by a min and max radius.
+class LIDAR_UTILS_PUBLIC DistanceZFilter
+{
+public:
+  /// \brief Cosntructor
+  /// \param min_z The z the point's z should be greater than
+  /// \param max_z The z the point's z should be lesser than
+  DistanceZFilter(float32_t min_z, float32_t max_z);
+
+  /// \brief Check if the point is within the allowed range of the filter. Check is done in
+  /// square form to avoid `sqrt`
+  /// \tparam T Point type
+  /// \param pt Point to be filtered
+  /// \return True if point is within the filter's range.
+  template<typename T>
+  bool8_t operator()(const T & pt) const
+  {
+    auto pt_z = pt.z;
+    return pt_z > m_min_z &&  pt_z < m_max_z;
+  }
+
+private:
+  float32_t m_min_z;
+  float32_t m_max_z;
 };
 
 /// \brief Transform to apply a constant transform to given points.
