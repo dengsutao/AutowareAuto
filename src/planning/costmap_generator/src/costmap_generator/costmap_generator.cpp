@@ -173,8 +173,7 @@ void CostmapGenerator::loadRoadAreasFromLaneletMap(const lanelet::LaneletMapPtr 
 }
 
 grid_map::GridMap CostmapGenerator::generateCostmap(
-  const POMsg & predictedobjects, const grid_map::Position & vehicle_to_grid_position,
-  const geometry_msgs::msg::TransformStamped & map_to_costmap_transform)
+  const POMsg & predictedobjects, const geometry_msgs::msg::TransformStamped & costmap_to_vehicle_transform)
 {
   // Clear data points
   area_points_.clear();
@@ -183,10 +182,10 @@ grid_map::GridMap CostmapGenerator::generateCostmap(
   loadDrivableAreasFromLaneletMap(predictedobjects);
 
   // Move grid map with data to robot's center position
-  costmap_.setPosition(vehicle_to_grid_position);
+  //costmap_.setPosition(vehicle_to_grid_position);
 
   // Apply lanelet2 info to costmap
-  costmap_[LayerName::WAYAREA] = generateWayAreaCostmap(map_to_costmap_transform);
+  costmap_[LayerName::WAYAREA] = generateWayAreaCostmap(costmap_to_vehicle_transform);
 
   costmap_[LayerName::COMBINED] = generateCombinedCostmap();
 
@@ -229,7 +228,7 @@ grid_map::Matrix CostmapGenerator::generateCombinedCostmap() const
 }
 
 grid_map::Matrix CostmapGenerator::generateWayAreaCostmap(
-  const geometry_msgs::msg::TransformStamped & map_to_costmap_transform) const
+  const geometry_msgs::msg::TransformStamped & costmap_to_vehicle_transform) const
 {
   grid_map::GridMap lanelet2_costmap = costmap_;
   // layer reset
@@ -240,7 +239,7 @@ grid_map::Matrix CostmapGenerator::generateWayAreaCostmap(
     const auto & grid_max_value = static_cast<int>(params_.grid_max_value);
     object_map::fillPolygonAreas(
       lanelet2_costmap, area_points_, LayerName::WAYAREA, grid_max_value, grid_min_value,
-      grid_min_value, grid_max_value, map_to_costmap_transform);
+      grid_min_value, grid_max_value, costmap_to_vehicle_transform);
   }
   return lanelet2_costmap[LayerName::WAYAREA];
 }

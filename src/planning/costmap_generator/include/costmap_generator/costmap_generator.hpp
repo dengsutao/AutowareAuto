@@ -122,12 +122,11 @@ public:
   /// \param [in] lanelet_ptr Pointer to lanelet2 map, used for applying driveable areas to costmap
   /// \param [in] vehicle_to_grid_position Translation between costmap and vehicle frame used to
   ///                                     align costmap and vehicle center
-  /// \param [in] map_to_costmap_transform Transform between map and costmap. Used for converting
+  /// \param [in] costmap_to_vehicle_transform Transform between map and costmap. Used for converting
   ///                                     lanelet polygon points when marking driveable areas
   /// \return Generated costmap
   grid_map::GridMap generateCostmap(
-    const POMsg & predictedobjects, const grid_map::Position & vehicle_to_grid_position,
-    const geometry_msgs::msg::TransformStamped & map_to_costmap_transform);
+    const POMsg & predictedobjects, const geometry_msgs::msg::TransformStamped & costmap_to_vehicle_transform);
 
 private:
   grid_map::GridMap costmap_;
@@ -154,7 +153,7 @@ private:
 
   /// \brief calculate cost from lanelet2 map
   grid_map::Matrix generateWayAreaCostmap(
-    const geometry_msgs::msg::TransformStamped & map_to_costmap_transform) const;
+    const geometry_msgs::msg::TransformStamped & costmap_to_vehicle_transform) const;
 
   /// \brief Calculate costmap layer costs for final output
   /// \return Costmap layer

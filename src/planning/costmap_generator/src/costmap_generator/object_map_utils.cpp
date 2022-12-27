@@ -59,9 +59,8 @@ void fillPolygonAreas(
   cv::Mat merged_filled_image = original_image.clone();
 
   // calculate out_grid_map position
-  grid_map::Position map_pos = out_grid_map.getPosition();
-  const double origin_x_offset = out_grid_map.getLength().x() / 2.0 - map_pos.x();
-  const double origin_y_offset = out_grid_map.getLength().y() / 2.0 - map_pos.y();
+  const double origin_x_offset = out_grid_map.getLength().x() / 2.0;
+  const double origin_y_offset = out_grid_map.getLength().y() / 2.0;
 
   for (const auto & points : in_area_points) {
     std::vector<cv::Point> cv_polygon;

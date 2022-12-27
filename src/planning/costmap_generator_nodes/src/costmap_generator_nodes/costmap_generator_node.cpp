@@ -337,12 +337,17 @@ void CostmapGeneratorNode::poResponse(
     RCLCPP_ERROR(this->get_logger(), "Setting costmap position failure: %s", ex.what());
     return;
   }
+  
+  if(costmap_params_.costmap_frame != "odom" || map_frame_ != "odom"){
+    RCLCPP_ERROR(this->get_logger(), "Costmap frame and map frame should both be odom.");
+  }
 
-  // Get costmap to map transform
-  geometry_msgs::msg::TransformStamped costmap_to_map_transform;
+
+  // Get odom to baselink transform
+  geometry_msgs::msg::TransformStamped costmap_to_vehicle_transform;
   try {
-    costmap_to_map_transform = tf_buffer_.lookupTransform(
-      costmap_params_.costmap_frame, map_frame_, rclcpp::Time(0),
+    costmap_to_vehicle_transform = tf_buffer_.lookupTransform(
+      vehicle_frame_, costmap_params_.costmap_frame, rclcpp::Time(0),
       rclcpp::Duration::from_seconds(1.0));
   } catch (tf2::TransformException & ex) {
     RCLCPP_ERROR(this->get_logger(), "Map to costmmap transform lookup failure: %s", ex.what());
@@ -350,7 +355,7 @@ void CostmapGeneratorNode::poResponse(
   }
   
   // Generate costmap
-  auto costmap = costmap_generator_->generateCostmap(predictedobjects, vehicle_to_grid_position, costmap_to_map_transform);
+  auto costmap = costmap_generator_->generateCostmap(predictedobjects, costmap_to_vehicle_transform);
 
   // Create result
   auto result = std::make_shared<PlannerCostmapAction::Result>();
