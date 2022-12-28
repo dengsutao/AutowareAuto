@@ -559,6 +559,7 @@ void eskf::EliminateError() {
 
 bool eskf::record()
 {
+    if (imu_data_buff_.size()==0 || gps_data_buff_.size()==0 || odom_data_buff_.size()==0) return false;
     auto curr_imu_data = imu_data_buff_.back();
     auto last_imu_data = imu_data_buff_.front();
     auto curr_gps_data = gps_data_buff_.back();
