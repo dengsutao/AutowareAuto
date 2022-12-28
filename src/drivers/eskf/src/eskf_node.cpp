@@ -1,4 +1,21 @@
-#include "eskf.h"
+// Copyright 2021 The Autoware Foundation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// Co-developed by Tier IV, Inc. and Apex.AI, Inc.
+
+#include "eskf/eskf_node.hpp"
+
 #include <iomanip>
 #include <thread>
 #include <unistd.h>
@@ -12,8 +29,12 @@
 #define KEYCODE_SPACE 0x20
 #define KEYCODE_ESC 0x1b
 
-
 using namespace std;
+
+namespace autoware
+{
+namespace eskf
+{
 
 constexpr double kDegree2Radian = M_PI / 180.0;
 
@@ -76,7 +97,8 @@ GPSData eskf::convert_data(const sensor_msgs::msg::NavSatFix::SharedPtr gps_msg)
 {
     // gps msg 读数坐标系：WGS-84,经纬度，转ENU
     GPSData gps_data;
-    gps_data.time = (double)gps_msg->header.stamp.sec + (double)gps_msg->header.stamp.nanosec * 1.0e-9;
+    gps_data.time = static_cast<double>(gps_msg->header.stamp.sec) +
+                   static_cast<double>(gps_msg->header.stamp.nanosec) * 1.0e-9;
 
     gps_data.position_lla.x() = gps_msg->latitude;
     gps_data.position_lla.y() = gps_msg->longitude;
@@ -90,7 +112,8 @@ GPSData eskf::convert_data(const sensor_msgs::msg::NavSatFix::SharedPtr gps_msg)
 IMUData eskf::convert_data(const sensor_msgs::msg::Imu::SharedPtr imu_msg)
 {
     IMUData imu_data;
-    imu_data.time = (double)imu_msg->header.stamp.sec + (double)imu_msg->header.stamp.nanosec * 1.0e-9;
+    imu_data.time = static_cast<double>(imu_msg->header.stamp.sec) + 
+                    static_cast<double>(imu_msg->header.stamp.nanosec) * 1.0e-9;
 
     imu_data.linear_accel.x() = imu_msg->linear_acceleration.x*gravity;
     imu_data.linear_accel.y() = imu_msg->linear_acceleration.y*gravity;
@@ -115,7 +138,7 @@ ODOMData eskf::convert_data(const nav_msgs::msg::Odometry::SharedPtr odom_msg)
     // ODOM坐标系nwu,角速度对应z轴朝上。
     // 需要转到enu
     ODOMData odom_data;
-    odom_data.time = (double)odom_msg->header.stamp.sec + (double)odom_msg->header.stamp.nanosec * 1.0e-9;
+    odom_data.time = static_cast<double>(odom_msg->header.stamp.sec) + static_cast<double>(odom_msg->header.stamp.nanosec) * 1.0e-9;
 
     odom_data.pose.x() = -odom_msg->pose.pose.position.y; // x方向坐标
     odom_data.pose.y() = odom_msg->pose.pose.position.x; // y方向坐标
@@ -138,6 +161,7 @@ ODOMData eskf::convert_data(const nav_msgs::msg::Odometry::SharedPtr odom_msg)
     odom_data.pose.y()=odom_data.pose.x() * sin(eular_angle_z) + odom_data.pose.y() * cos(eular_angle_z); 
     odom_data.vel.x()=odom_data.vel.x() * cos(eular_angle_z) - odom_data.vel.y() * sin(eular_angle_z); 
     odom_data.vel.y()=odom_data.vel.x() * sin(eular_angle_z) + odom_data.vel.y() * cos(eular_angle_z); 
+
     // RCLCPP_INFO(get_logger(), "after\nodom_data.pose_x:"+std::to_string(odom_data.pose.x())+
     //                             "\nodom_data.pose_y:"+std::to_string(odom_data.pose.y())+
     //                             "\nodom_data.pose_z:"+std::to_string(odom_data.pose.z()));
@@ -646,6 +670,15 @@ bool eskf::record()
     t.transform.rotation.y = curr_imu_data.quat.y();
     t.transform.rotation.z = curr_imu_data.quat.z();
     tf_broadcaster_->sendTransform(t);
+
+    //publish autoware_auto_vehicle_msgs::msg::VehicleKinematicState
+    autoware_auto_vehicle_msgs::msg::VehicleKinematicState vks;
+    vks.header.stamp = now;
+    vks.header.frame_id = "odom";
+    vks.state.longitudinal_velocity_mps = static_cast<float>(curr_odom_data_.vel.x());
+    vks.state.lateral_velocity_mps = static_cast<float>(curr_odom_data_.vel.y());
+    vks.state.pose = cur_pose.pose;
+    vks_pub->publish(vks);
     return true;
 }
 
@@ -840,116 +873,118 @@ void eskf::thread_twist_pub()
 
 void eskf::keyboard_controll()
 {
-    tcgetattr(kfd, &cooked);
-    memcpy(&raw, &cooked, sizeof(struct termios));
-    /**
-	 * c_lflag : 本地模式标志，控制终端编辑功能
-	 * ICANON: 使用标准输入模式
-	 * ECHO: 显示输入字符
-	 */
-    raw.c_lflag &=~ (ICANON | ECHO);
+//     tcgetattr(kfd, &cooked);
+//     memcpy(&raw, &cooked, sizeof(struct termios));
+//     /**
+// 	 * c_lflag : 本地模式标志，控制终端编辑功能
+// 	 * ICANON: 使用标准输入模式
+// 	 * ECHO: 显示输入字符
+// 	 */
+//     raw.c_lflag &=~ (ICANON | ECHO);
 
-	/** 
-	 * c_cc[NCCS]：控制字符，用于保存终端驱动程序中的特殊字符，如输入结束符等
-	 * VEOL: 附加的End-of-file字符
-	 * VEOF: End-of-file字符
-	 * */
-    raw.c_cc[VEOL] = 1;
-    raw.c_cc[VEOF] = 2;
-    tcsetattr(kfd, TCSANOW, &raw);
-    /* *
-	 * struct pollfd {
-　　       int fd;        文件描述符 
-　       　short events;  等待的事件 
-　　       short revents; 实际发生了的事件 
-　       　};
-    */
-    struct pollfd ufd;
-    ufd.fd = kfd;
-    ufd.events = POLLIN;
+// 	/** 
+// 	 * c_cc[NCCS]：控制字符，用于保存终端驱动程序中的特殊字符，如输入结束符等
+// 	 * VEOL: 附加的End-of-file字符
+// 	 * VEOF: End-of-file字符
+// 	 * */
+//     raw.c_cc[VEOL] = 1;
+//     raw.c_cc[VEOF] = 2;
+//     tcsetattr(kfd, TCSANOW, &raw);
+//     /* *
+// 	 * struct pollfd {
+// 　　       int fd;        文件描述符 
+// 　       　short events;  等待的事件 
+// 　　       short revents; 实际发生了的事件 
+// 　       　};
+//     */
+//     struct pollfd ufd;
+//     ufd.fd = kfd;
+//     ufd.events = POLLIN;
 
-    char c;
-    while (true)
-    {
-        /* get the next event from the keyboard */
-        int num;
+//     char c;
+//     while (true)
+//     {
+//         /* get the next event from the keyboard */
+//         int num;
         
-		/**
-		 * poll:把当前的文件指针挂到设备内部定义的等待队列中。
-		 * unsigned int (*poll)(struct file * fp, struct poll_table_struct * table)
-		 */
-        if ((num = poll(&ufd, 1, 250)) < 0)
-        {
-			/**
-			 * perror( ) 用来将上一个函数发生错误的原因输出到标准设备(stderr)。
-			 * 参数s所指的字符串会先打印出,后面再加上错误原因字符串。
-			 * 此错误原因依照全局变量errno 的值来决定要输出的字符串。
-			 * */
-            perror("poll():");
-            return;
-        }
-        else if(num > 0)
-        {
-            if(read(kfd, &c, 1) < 0)
-            {
-                perror("read():");
-                return;
-            }
-        }
-        geometry_msgs::msg::Twist tst;
-        switch(c)
-        {
-            case KEYCODE_W:
-            {
-                thread_active = true;
-                tst.linear.x = 0.5;
-                twist_pub->publish(tst);
-                break;
-            }
-            case KEYCODE_S:
-            {
-                thread_active = true;
-                tst.linear.x = -0.5;
-                twist_pub->publish(tst);
-                break;
-            }
-            case KEYCODE_A:
-            {
-                thread_active = true;
-                tst.angular.z = 20.0;
-                twist_pub->publish(tst);
-                break;
-            }
-            case KEYCODE_D:
-            {
-                thread_active = true;
-                tst.angular.z = -20.0;
-                twist_pub->publish(tst);
-                break;
-            }
+// 		/**
+// 		 * poll:把当前的文件指针挂到设备内部定义的等待队列中。
+// 		 * unsigned int (*poll)(struct file * fp, struct poll_table_struct * table)
+// 		 */
+//         if ((num = poll(&ufd, 1, 250)) < 0)
+//         {
+// 			/**
+// 			 * perror( ) 用来将上一个函数发生错误的原因输出到标准设备(stderr)。
+// 			 * 参数s所指的字符串会先打印出,后面再加上错误原因字符串。
+// 			 * 此错误原因依照全局变量errno 的值来决定要输出的字符串。
+// 			 * */
+//             perror("poll():");
+//             return;
+//         }
+//         else if(num > 0)
+//         {
+//             if(read(kfd, &c, 1) < 0)
+//             {
+//                 perror("read():");
+//                 return;
+//             }
+//         }
+//         geometry_msgs::msg::Twist tst;
+//         switch(c)
+//         {
+//             case KEYCODE_W:
+//             {
+//                 thread_active = true;
+//                 tst.linear.x = 0.5;
+//                 twist_pub->publish(tst);
+//                 break;
+//             }
+//             case KEYCODE_S:
+//             {
+//                 thread_active = true;
+//                 tst.linear.x = -0.5;
+//                 twist_pub->publish(tst);
+//                 break;
+//             }
+//             case KEYCODE_A:
+//             {
+//                 thread_active = true;
+//                 tst.angular.z = 20.0;
+//                 twist_pub->publish(tst);
+//                 break;
+//             }
+//             case KEYCODE_D:
+//             {
+//                 thread_active = true;
+//                 tst.angular.z = -20.0;
+//                 twist_pub->publish(tst);
+//                 break;
+//             }
                 
-            case KEYCODE_SPACE:
-            {
-                thread_active = false;
-                tst.linear.x = 0.0;
-                twist_pub->publish(tst);
-                break;
-            }
-            case KEYCODE_ESC:
-            {
-                thread_active = false;
-                tst.linear.x = 0.0;
-                twist_pub->publish(tst);
-                exit(0);
-            }
-            default:
-            {
-            }
-        }
-    }
+//             case KEYCODE_SPACE:
+//             {
+//                 thread_active = false;
+//                 tst.linear.x = 0.0;
+//                 twist_pub->publish(tst);
+//                 break;
+//             }
+//             case KEYCODE_ESC:
+//             {
+//                 thread_active = false;
+//                 tst.linear.x = 0.0;
+//                 twist_pub->publish(tst);
+//                 exit(0);
+//             }
+//             default:
+//             {
+//             }
+//         }
+//     }
 }
 
-eskf::eskf(std::string name): Node(name)
+eskf::eskf(
+  const rclcpp::NodeOptions & node_options)
+: Node("eskf_node", node_options)
 {
     // init subscriber
     gps_sub = this->create_subscription<sensor_msgs::msg::NavSatFix>("gps", 10, std::bind(&eskf::gps_callback, this, std::placeholders::_1));
@@ -964,6 +999,7 @@ eskf::eskf(std::string name): Node(name)
     cur_pose_pub = create_publisher<geometry_msgs::msg::PoseStamped>("cur_pose", 10);
     init_gps_pub = create_publisher<sensor_msgs::msg::NavSatFix>("init_gps", 10);
     tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
+    vks_pub = create_publisher<autoware_auto_vehicle_msgs::msg::VehicleKinematicState>("vehicle_kinematic_state", 10);
     // 小车目标速度的publisher
     twist_pub = create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
     // 默认小车自身坐标系下y方向速度为0
@@ -1022,7 +1058,7 @@ eskf::eskf(std::string name): Node(name)
     
     // init save dir, file_name
     save_dir = "/home/dengsutao/AutowareAuto/src/drivers/eskf/records";
-    save_file_name = std::to_string((int)(std::chrono::system_clock::now().time_since_epoch().count() / 1e9))+".txt";
+    save_file_name = std::to_string(static_cast<uint32_t>(static_cast<double>(std::chrono::system_clock::now().time_since_epoch().count()) / 1e9))+".txt";
     // 复现时读取的录制文件
     declare_parameter<std::string>("record_in","");
     std::string record_in_file_name = get_parameter("record_in").get_value<std::string>();
@@ -1112,7 +1148,7 @@ eskf::eskf(std::string name): Node(name)
             // std::cout<<"time:"<<cur_data.time<<std::endl;
             //最后的速度没有被更改，默认为0。
         }
-        size_t size = record_in_data_buff_.size();
+        // size_t size = record_in_data_buff_.size();
         // std::cout<<"velocity:"<<record_in_data_buff_.at(size-1).velocity.transpose()<<std::endl;
         // std::cout<<"record path node number after optimization:"<<size<<std::endl;
         // 开启速度发布的线程
@@ -1142,11 +1178,20 @@ eskf::~eskf()
     RCLCPP_INFO(get_logger(), "record file:"+save_file_name);
 }
 
-int main(int argc, char * argv[])
-{
-    rclcpp::init(argc, argv);
-    auto node = std::make_shared<eskf>("eskf");
-    rclcpp::spin(node);
-    rclcpp::shutdown();
-    return 0;
-}
+// int main(int argc, char * argv[])
+// {
+//     rclcpp::init(argc, argv);
+//     auto node = std::make_shared<eskf>("eskf");
+//     rclcpp::spin(node);
+//     rclcpp::shutdown();
+//     return 0;
+// }
+
+}  // namespace eskf
+}  // namespace autoware
+
+#include "rclcpp_components/register_node_macro.hpp"
+
+// This acts as an entry point, allowing the component to be
+// discoverable when its library is being loaded into a running process
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::eskf::eskf)

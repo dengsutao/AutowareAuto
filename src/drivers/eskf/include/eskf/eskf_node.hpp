@@ -1,10 +1,29 @@
+// Copyright 2021 The Autoware Foundation
 //
-// Created by meng on 2021/2/19.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// Co-developed by Tier IV, Inc. and Apex.AI, Inc.
 
-#ifndef ESKF_DATA_H
-#define ESKF_DATA_H
+/// \copyright Copyright 2021 The Autoware Foundation
+/// \file
+/// \brief This file defines the eskf_node class.
 
+#ifndef ESKF__ESKF_NODE_HPP_
+#define ESKF__ESKF_NODE_HPP_
+
+#include <eskf/visibility_control.hpp>
+
+#include <rclcpp/rclcpp.hpp>
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Dense>
 #include "rclcpp/rclcpp.hpp"
@@ -22,12 +41,18 @@
 #include <vector>
 #include <tf2_ros/transform_broadcaster.h>
 #include <geometry_msgs/msg/transform_stamped.hpp>
+#include <autoware_auto_vehicle_msgs/msg/vehicle_kinematic_state.hpp>
 
 #include "imu_data.h"
 #include "gps_data.h"
 #include "odom_data.h"
 
 using namespace std;
+
+namespace autoware
+{
+namespace eskf
+{
 
 const unsigned int DIM_STATE = 15;
 const unsigned int DIM_STATE_NOISE = 6;
@@ -62,7 +87,7 @@ const unsigned int FLAG_INIT_DATA = 6;
 const unsigned int ALL_INIT_FLAG = 0b1111111;
 const unsigned int ALL_RECV_FLAG = 0b111;
 
-class eskf: public rclcpp::Node
+class ESKF_PUBLIC eskf: public rclcpp::Node
 {
 private:
     TypeVectorX X_;
@@ -196,12 +221,12 @@ private:
     Eigen::Vector3d quat2eular(Eigen::Quaterniond quat);
 
 public:
-    eskf(std::string name);
+    explicit eskf(const rclcpp::NodeOptions & node_options);
     ~eskf();
     rclcpp::Subscription<sensor_msgs::msg::NavSatFix>::SharedPtr gps_sub;
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub;
-    int init_flag_; // binary state, 0b1111, 从左到右分别对应数据初始化/gps接收/imu接收/odom接收
+    uint32_t init_flag_; // binary state, 0b1111, 从左到右分别对应数据初始化/gps接收/imu接收/odom接收
     static Eigen::Vector3d LLA2ENU(const Eigen::Vector3d& lla);
 
     rclcpp::Publisher<std_msgs::msg::UInt32>::SharedPtr reset_odom_pub;
@@ -212,6 +237,7 @@ public:
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr cur_pose_pub;
     rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr init_gps_pub;
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+    rclcpp::Publisher<autoware_auto_vehicle_msgs::msg::VehicleKinematicState>::SharedPtr vks_pub;
 
     bool predict();
     bool odom_correct();
@@ -235,6 +261,7 @@ public:
     std::deque<IMUData> imu_data_buff_;
     std::deque<ODOMData> odom_data_buff_;
 };
+}  // namespace eskf
+}  // namespace autoware
 
-
-#endif //ESKF_DATA_H
+#endif  // ESKF__ESKF_NODE_HPP_

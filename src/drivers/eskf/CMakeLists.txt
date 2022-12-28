@@ -1,6 +1,20 @@
-cmake_minimum_required(VERSION 3.5)
-project(eskf)
+# Copyright 2021 The Autoware Foundation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+cmake_minimum_required(VERSION 3.5)
+
+project(eskf)
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 99)
@@ -10,59 +24,63 @@ endif()
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 14)
 endif()
-
-if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic)
-endif()
-
-# find dependencies
-find_package(ament_cmake REQUIRED)
-find_package(rclcpp REQUIRED)
-find_package(sensor_msgs REQUIRED)
-find_package(std_msgs REQUIRED)
-find_package(nav_msgs REQUIRED)
-find_package(geometry_msgs REQUIRED)
-find_package(Eigen3 REQUIRED)
-find_package(tf2_ros REQUIRED)
-
-
-if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  # the following line skips the linter which checks for copyrights
-  # uncomment the line when a copyright and license is not present in all source files
-  #set(ament_cmake_copyright_FOUND TRUE)
-  # the following line skips cpplint (only works in a git repo)
-  # uncomment the line when this package is not in a git repo
-  #set(ament_cmake_cpplint_FOUND TRUE)
-  ament_lint_auto_find_test_dependencies()
-endif()
-
-ament_package()
-
-include_directories(include ${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
-include_directories(include/${PROJECT_NAME})
+# require that dependencies from package.xml be available
+find_package(ament_cmake_auto REQUIRED)
+ament_auto_find_build_dependencies(REQUIRED
+  ${${PROJECT_NAME}_BUILD_DEPENDS}
+  ${${PROJECT_NAME}_BUILDTOOL_DEPENDS}
+)
 include_directories(3rd/GeographicLib/include)
 include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
 
-add_library(DEPS SHARED
-    3rd/GeographicLib/src/LocalCartesian.cpp
-    3rd/GeographicLib/src/Geocentric.cpp
-    3rd/GeographicLib/src/Math.cpp
+
+set(ESKF_LIB_HEADERS
+  include/eskf/visibility_control.hpp
+  
 )
 
-add_executable(eskf_node src/eskf.cpp)
-target_link_libraries(eskf_node DEPS)
-ament_target_dependencies(eskf_node rclcpp)
-ament_target_dependencies(eskf_node sensor_msgs)
-ament_target_dependencies(eskf_node std_msgs)
-ament_target_dependencies(eskf_node nav_msgs)
-ament_target_dependencies(eskf_node geometry_msgs)
-ament_target_dependencies(eskf_node tf2_ros)
+# generate library
+ament_auto_add_library(${PROJECT_NAME} SHARED
+  ${ESKF_LIB_HEADERS}
+  3rd/GeographicLib/src/LocalCartesian.cpp
+  3rd/GeographicLib/src/Geocentric.cpp
+  3rd/GeographicLib/src/Math.cpp
+)
+autoware_set_compile_options(${PROJECT_NAME})
 
-install(TARGETS
-  eskf_node
-  DESTINATION lib/${PROJECT_NAME}
+set(ESKF_NODE_SRC
+  src/eskf_node.cpp
 )
 
-install(DIRECTORY launch
-  DESTINATION share/${PROJECT_NAME})
+set(ESKF_NODE_HEADERS
+  include/eskf/eskf_node.hpp
+)
+
+# generate component node library
+ament_auto_add_library(${PROJECT_NAME}_node SHARED
+  ${ESKF_NODE_SRC}
+  ${ESKF_NODE_HEADERS}
+)
+autoware_set_compile_options(${PROJECT_NAME}_node)
+rclcpp_components_register_node(${PROJECT_NAME}_node
+  PLUGIN "autoware::eskf::eskf"
+  EXECUTABLE ${PROJECT_NAME}_node_exe
+)
+
+# Testing
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  ament_lint_auto_find_test_dependencies()
+
+  # Unit tests
+  set(TEST_SOURCES test/test_eskf.cpp)
+  set(TEST_ESKF_EXE test_eskf)
+  ament_add_gtest(${TEST_ESKF_EXE} ${TEST_SOURCES})
+  autoware_set_compile_options(${TEST_ESKF_EXE})
+  target_link_libraries(${TEST_ESKF_EXE} ${PROJECT_NAME})
+endif()
+
+# ament package generation and installing
+ament_auto_package(INSTALL_TO_SHARE
+  launch
+)
