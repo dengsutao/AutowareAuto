@@ -28,14 +28,14 @@ def generate_launch_description():
          }])
     eskf_runner = launch_ros.actions.Node(
         package='eskf',
-        executable='eskf_node',
+        executable='eskf_node_exe',
         parameters=[{
-            'mode': 1,
+            'mode': 0,
             'debug': True,
          }])
     return launch.LaunchDescription([
-        imu_gps_runner,
-        gps_runner,
-        wheel_imu_runner,
+        # imu_gps_runner,
+        # gps_runner,
+        # wheel_imu_runner,
         eskf_runner
         ])

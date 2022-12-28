@@ -15,6 +15,7 @@
 cmake_minimum_required(VERSION 3.5)
 
 project(eskf)
+
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 99)
@@ -22,8 +23,9 @@ endif()
 
 # Default to C++14
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 14)
+  set(CMAKE_CXX_STANDARD 17)
 endif()
+
 # require that dependencies from package.xml be available
 find_package(ament_cmake_auto REQUIRED)
 ament_auto_find_build_dependencies(REQUIRED
@@ -33,33 +35,22 @@ ament_auto_find_build_dependencies(REQUIRED
 include_directories(3rd/GeographicLib/include)
 include_directories(SYSTEM ${EIGEN3_INCLUDE_DIR})
 
-
-set(ESKF_LIB_HEADERS
-  include/eskf/visibility_control.hpp
-  
-)
-
-# generate library
-ament_auto_add_library(${PROJECT_NAME} SHARED
-  ${ESKF_LIB_HEADERS}
-  3rd/GeographicLib/src/LocalCartesian.cpp
-  3rd/GeographicLib/src/Geocentric.cpp
-  3rd/GeographicLib/src/Math.cpp
-)
-autoware_set_compile_options(${PROJECT_NAME})
-
 set(ESKF_NODE_SRC
   src/eskf_node.cpp
 )
 
 set(ESKF_NODE_HEADERS
   include/eskf/eskf_node.hpp
+  include/eskf/visibility_control.hpp
 )
 
 # generate component node library
 ament_auto_add_library(${PROJECT_NAME}_node SHARED
   ${ESKF_NODE_SRC}
   ${ESKF_NODE_HEADERS}
+  3rd/GeographicLib/src/LocalCartesian.cpp
+  3rd/GeographicLib/src/Geocentric.cpp
+  3rd/GeographicLib/src/Math.cpp
 )
 autoware_set_compile_options(${PROJECT_NAME}_node)
 rclcpp_components_register_node(${PROJECT_NAME}_node
@@ -72,12 +63,6 @@ if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
 
-  # Unit tests
-  set(TEST_SOURCES test/test_eskf.cpp)
-  set(TEST_ESKF_EXE test_eskf)
-  ament_add_gtest(${TEST_ESKF_EXE} ${TEST_SOURCES})
-  autoware_set_compile_options(${TEST_ESKF_EXE})
-  target_link_libraries(${TEST_ESKF_EXE} ${PROJECT_NAME})
 endif()
 
 # ament package generation and installing
