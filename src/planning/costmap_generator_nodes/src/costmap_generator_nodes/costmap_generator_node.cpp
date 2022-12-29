@@ -217,6 +217,8 @@ CostmapGeneratorNode::CostmapGeneratorNode(const rclcpp::NodeOptions & node_opti
     [this](auto uuid, auto goal) {return this->handleGoal(uuid, goal);},
     [this](auto goal_handle) {return this->handleCancel(goal_handle);},
     [this](auto goal_handle) {return this->handleAccepted(goal_handle);});
+  
+  RCLCPP_INFO(this->get_logger(), "Costmap node started.");
 }
 
 void CostmapGeneratorNode::predict_callback(const POMsg::ConstSharedPtr po)

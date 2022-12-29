@@ -25,6 +25,7 @@
 // Autoware packages
 #include <common/types.hpp>
 #include <autoware_auto_planning_msgs/msg/had_map_route.hpp>
+#include <gaode_api_route_msgs/msg/gaode_api_route.hpp>
 #include <autoware_auto_planning_msgs/msg/trajectory.hpp>
 #include <autoware_auto_vehicle_msgs/msg/vehicle_kinematic_state.hpp>
 
@@ -52,6 +53,7 @@ constexpr const char Lane[] = "lane";
 
 
 using autoware_auto_planning_msgs::msg::HADMapRoute;
+using gaode_api_route_msgs::msg::GaodeApiRoute;
 using autoware_auto_mapping_msgs::msg::MapPrimitive;
 using geometry_msgs::msg::Pose;
 using State = autoware_auto_vehicle_msgs::msg::VehicleKinematicState;
@@ -88,7 +90,7 @@ class BEHAVIOR_PLANNER_PUBLIC BehaviorPlanner
 public:
   explicit BehaviorPlanner(const PlannerConfig & config);
 
-  void set_route(const HADMapRoute & route, const lanelet::LaneletMapPtr & lanelet_map_ptr);
+  void set_route(const GaodeApiRoute & route);
   void clear_route();
   void set_next_subroute();
 

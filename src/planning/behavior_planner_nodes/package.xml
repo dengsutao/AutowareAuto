@@ -18,6 +18,7 @@
   <depend>autoware_auto_control_msgs</depend>
   <depend>autoware_auto_planning_msgs</depend>
   <depend>autoware_auto_vehicle_msgs</depend>
+  <depend>gaode_api_route_msgs</depend>
   <depend>autoware_auto_geometry</depend>
   <depend>had_map_utils</depend>
   <depend>behavior_planner</depend>

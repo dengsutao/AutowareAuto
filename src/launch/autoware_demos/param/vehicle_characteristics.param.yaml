@@ -10,3 +10,4 @@
       width_m: 2.0
       front_overhang_m: 1.033
       rear_overhang_m: 1.021
+      cg_to_vehicle_center: 0.0

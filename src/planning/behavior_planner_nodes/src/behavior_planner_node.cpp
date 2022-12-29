@@ -40,16 +40,16 @@ void BehaviorPlannerNode::init()
   using namespace std::chrono_literals;
 
   // Setup planner
-  const auto cg_to_front_m =
-    static_cast<float32_t>(declare_parameter("vehicle.cg_to_front_m").get<float64_t>());
-  const auto cg_to_rear_m =
-    static_cast<float32_t>(declare_parameter("vehicle.cg_to_rear_m").get<float64_t>());
-  const auto front_overhang_m =
-    static_cast<float32_t>(declare_parameter("vehicle.front_overhang_m").get<float64_t>());
-  const auto rear_overhang_m =
-    static_cast<float32_t>(declare_parameter("vehicle.rear_overhang_m").get<float64_t>());
+  // const auto cg_to_front_m =
+  //   static_cast<float32_t>(declare_parameter("vehicle.cg_to_front_m").get<float64_t>());
+  // const auto cg_to_rear_m =
+  //   static_cast<float32_t>(declare_parameter("vehicle.cg_to_rear_m").get<float64_t>());
+  // const auto front_overhang_m =
+  //   static_cast<float32_t>(declare_parameter("vehicle.front_overhang_m").get<float64_t>());
+  // const auto rear_overhang_m =
+  //   static_cast<float32_t>(declare_parameter("vehicle.rear_overhang_m").get<float64_t>());
   const auto cg_to_vehicle_center =
-    ( (cg_to_front_m + front_overhang_m) - (rear_overhang_m + cg_to_rear_m) ) * 0.5F;
+    static_cast<float32_t>(declare_parameter("vehicle.cg_to_vehicle_center").get<float64_t>());
 
   const behavior_planner::PlannerConfig config{
     static_cast<float32_t>(declare_parameter("goal_distance_thresh").get<float64_t>()),
@@ -103,14 +103,14 @@ void BehaviorPlannerNode::init()
   }
 
   m_map_client = this->create_client<HADMapService>("HAD_Map_Service");
-  while (!m_map_client->wait_for_service(1s)) {
-    if (!rclcpp::ok()) {
-      RCLCPP_ERROR(get_logger(), "Interrupted while waiting for service 'HAD_Map_Service'.");
-      rclcpp::shutdown();
-      return;
-    }
-    RCLCPP_INFO(get_logger(), "Waiting for service 'HAD_Map_Service'...");
-  }
+  // while (!m_map_client->wait_for_service(1s)) {
+  //   if (!rclcpp::ok()) {
+  //     RCLCPP_ERROR(get_logger(), "Interrupted while waiting for service 'HAD_Map_Service'.");
+  //     rclcpp::shutdown();
+  //     return;
+  //   }
+  //   RCLCPP_INFO(get_logger(), "Waiting for service 'HAD_Map_Service'...");
+  // }
 
   if (declare_parameter("enable_object_collision_estimator").get<bool>()) {
     m_modify_trajectory_client = this->create_client<ModifyTrajectory>("estimate_collision");
@@ -124,13 +124,15 @@ void BehaviorPlannerNode::init()
     }
   }
 
+  RCLCPP_INFO(get_logger(), "Behavior planner started.");
+
   // Setup subscribers
   m_ego_state_sub = this->create_subscription<State>(
     "vehicle_state", QoS{10},
     [this](const State::SharedPtr msg) {on_ego_state(msg);});
-  m_route_sub = this->create_subscription<HADMapRoute>(
+  m_route_sub = this->create_subscription<GaodeApiRoute>(
     "route", QoS{10},
-    [this](const HADMapRoute::SharedPtr msg) {on_route(msg);});
+    [this](const GaodeApiRoute::SharedPtr msg) {on_route(msg);});
   m_gear_report_sub = this->create_subscription<GearReport>(
     "gear_report", QoS{10},
     [this](const GearReport::SharedPtr msg) {on_gear_report(msg);});
@@ -197,17 +199,17 @@ State BehaviorPlannerNode::transform_to_map(const State & state)
   geometry_msgs::msg::TransformStamped tf;
   try {
     tf = m_tf_buffer->lookupTransform(
-      "map", state.header.frame_id,
+      "odom", state.header.frame_id,
       time_utils::from_message(state.header.stamp));
   } catch (const tf2::ExtrapolationException &) {
     // TODO(mitsudome-r): currently falls back to retrive newest
     // transform available for availability,
     // Do validation in the future
-    tf = m_tf_buffer->lookupTransform("map", state.header.frame_id, tf2::TimePointZero);
+    tf = m_tf_buffer->lookupTransform("odom", state.header.frame_id, tf2::TimePointZero);
   }
   State transformed_state;
   motion::motion_common::doTransform(state, transformed_state, tf);
-  transformed_state.header.frame_id = "map";
+  transformed_state.header.frame_id = "odom";
   transformed_state.header.stamp = state.header.stamp;
   return transformed_state;
 }
@@ -220,7 +222,7 @@ void BehaviorPlannerNode::request_trajectory(const RouteWithType & route_with_ty
   const auto & route = route_with_type.route;
   const auto & planner_type = route_with_type.planner_type;
 
-  visualize_global_path(route);
+  // visualize_global_path(route);
 
   auto action_goal = PlanTrajectoryAction::Goal();
   action_goal.sub_route = route;
@@ -252,12 +254,13 @@ void BehaviorPlannerNode::request_trajectory(const RouteWithType & route_with_ty
 void BehaviorPlannerNode::on_ego_state(const State::SharedPtr & msg)
 {
   // Do nothing if localization result is not received yet.
-  if (!m_tf_buffer->canTransform("map", msg->header.frame_id, tf2::TimePointZero)) {
+  if (!m_tf_buffer->canTransform("odom", msg->header.frame_id, tf2::TimePointZero)) {
     RCLCPP_INFO(get_logger(), "Waiting for localization result to become available");
     return;
   }
 
-  m_ego_state = transform_to_map(*msg);
+  // m_ego_state = transform_to_map(*msg);
+  m_ego_state = *msg;
 
   // do nothing if we haven't got route yet
   if (!m_planner->is_route_ready()) {
@@ -335,7 +338,7 @@ void BehaviorPlannerNode::on_gear_report(const GearReport::SharedPtr & msg)
   m_current_gear = msg->report;
 }
 
-void BehaviorPlannerNode::on_route(const HADMapRoute::SharedPtr & msg)
+void BehaviorPlannerNode::on_route(const GaodeApiRoute::SharedPtr & msg)
 {
   if (m_requesting_trajectory) {
     RCLCPP_ERROR(
@@ -353,17 +356,17 @@ void BehaviorPlannerNode::on_route(const HADMapRoute::SharedPtr & msg)
   RCLCPP_INFO(get_logger(), "Received route");
 
   m_route = msg;
+  map_response();
+  // // TODO(mitsudome-r): replace it with bounded request
+  // auto request = std::make_shared<HADMapService::Request>();
+  // request->requested_primitives.push_back(HADMapService::Request::FULL_MAP);
 
-  // TODO(mitsudome-r): replace it with bounded request
-  auto request = std::make_shared<HADMapService::Request>();
-  request->requested_primitives.push_back(HADMapService::Request::FULL_MAP);
-
-  // TODO(mitsudome-r): If synchronized service request becomes available,
-  // replace it with synchronized implementation
-  auto result =
-    m_map_client->async_send_request(
-    request,
-    std::bind(&BehaviorPlannerNode::map_response, this, std::placeholders::_1));
+  // // TODO(mitsudome-r): If synchronized service request becomes available,
+  // // replace it with synchronized implementation
+  // auto result =
+  //   m_map_client->async_send_request(
+  //   request,
+  //   std::bind(&BehaviorPlannerNode::map_response, this, std::placeholders::_1));
 }
 
 void BehaviorPlannerNode::modify_trajectory_response(
@@ -381,19 +384,21 @@ void BehaviorPlannerNode::modify_trajectory_response(
   m_trajectory_pub->publish(trajectory);
 }
 
-void BehaviorPlannerNode::map_response(rclcpp::Client<HADMapService>::SharedFuture future)
+void BehaviorPlannerNode::map_response()
 {
-  m_lanelet_map_ptr = std::make_shared<lanelet::LaneletMap>();
-  autoware::common::had_map_utils::fromBinaryMsg(future.get()->map, m_lanelet_map_ptr);
-
-  RCLCPP_INFO(get_logger(), "Received map");
+  // m_lanelet_map_ptr = std::make_shared<lanelet::LaneletMap>();
+  // autoware::common::had_map_utils::fromBinaryMsg(future.get()->map, m_lanelet_map_ptr);
+  // RCLCPP_INFO(get_logger(), "Received map");
 
   // TODO(mitsudome-r) move to handle_accepted() when synchronous service is available
-  m_planner->set_route(*m_route, m_lanelet_map_ptr);
+  m_planner->set_route(*m_route);
+  
 
   const auto subroutes = m_planner->get_subroutes();
+  RCLCPP_INFO(get_logger(), std::to_string(subroutes.size()));
+
   Trajectory checkpoints;
-  checkpoints.header.frame_id = "map";
+  checkpoints.header.frame_id = "odom";
   for (const auto & subroute : subroutes) {
     TrajectoryPoint trajectory_start_point;
     trajectory_start_point.pose = subroute.route.start_pose;
@@ -412,7 +417,7 @@ void BehaviorPlannerNode::visualize_global_path(const HADMapRoute & route)
   auto debug_global_path = geometry_msgs::msg::PoseArray();
 
   debug_global_path.header.stamp = rclcpp::Time();
-  debug_global_path.header.frame_id = "map";
+  debug_global_path.header.frame_id = "odom";
 
   debug_global_path.poses.push_back(route.start_pose);
   debug_global_path.poses.push_back(route.goal_pose);

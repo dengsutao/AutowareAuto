@@ -36,6 +36,7 @@
 #include <autoware_auto_vehicle_msgs/msg/gear_command.hpp>
 #include <autoware_auto_vehicle_msgs/msg/vehicle_state_report.hpp>
 #include <autoware_auto_mapping_msgs/srv/had_map_service.hpp>
+#include <gaode_api_route_msgs/msg/gaode_api_route.hpp>
 #include <autoware_auto_planning_msgs/srv/modify_trajectory.hpp>
 #include <behavior_planner/behavior_planner.hpp>
 
@@ -63,6 +64,7 @@ using geometry_msgs::msg::Pose;
 using autoware_auto_planning_msgs::msg::Trajectory;
 using autoware_auto_planning_msgs::msg::TrajectoryPoint;
 using autoware_auto_planning_msgs::msg::HADMapRoute;
+using gaode_api_route_msgs::msg::GaodeApiRoute;
 using autoware_auto_vehicle_msgs::msg::VehicleStateReport;
 using autoware_auto_vehicle_msgs::msg::GearReport;
 using autoware_auto_vehicle_msgs::msg::GearCommand;
@@ -96,7 +98,7 @@ private:
   // May be nullptr if disabled
   rclcpp::Client<ModifyTrajectory>::SharedPtr m_modify_trajectory_client;
   rclcpp::Subscription<State>::SharedPtr m_ego_state_sub{};
-  rclcpp::Subscription<HADMapRoute>::SharedPtr m_route_sub{};
+  rclcpp::Subscription<GaodeApiRoute>::SharedPtr m_route_sub{};
   rclcpp::Subscription<Trajectory>::SharedPtr m_lane_trajectory_sub{};
   rclcpp::Subscription<Trajectory>::SharedPtr m_parking_trajectory_sub{};
   rclcpp::Subscription<GearReport>::SharedPtr m_gear_report_sub{};
@@ -112,7 +114,7 @@ private:
 
   // msg cache
   lanelet::LaneletMapPtr m_lanelet_map_ptr;
-  HADMapRoute::SharedPtr m_route;
+  GaodeApiRoute::SharedPtr m_route;
   State m_ego_state;
   uchar8_t m_current_gear;
 
@@ -126,11 +128,11 @@ private:
 
   // callbacks
   void on_ego_state(const State::SharedPtr & msg);
-  void on_route(const HADMapRoute::SharedPtr & msg);
+  void on_route(const GaodeApiRoute::SharedPtr & msg);
   void on_lane_trajectory(const Trajectory::SharedPtr & msg);
   void on_parking_trajectory(const Trajectory::SharedPtr & msg);
   void on_gear_report(const GearReport::SharedPtr & msg);
-  void map_response(rclcpp::Client<HADMapService>::SharedFuture future);
+  void map_response();
   void modify_trajectory_response(rclcpp::Client<ModifyTrajectory>::SharedFuture future);
   void clear_trajectory_cache();
 
