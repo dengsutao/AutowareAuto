@@ -32,6 +32,8 @@ import os
 import time
 from math import hypot
 import unittest
+import threading
+from global_path_mapping_action.action import GlobalPathMappingAction
 
 
 def are_positions_close(p1, p2, margin):
@@ -56,18 +58,19 @@ class CostmapGeneratorMockSmallSquare(CostmapGeneratorMockBase):
         super().__init__()
 
     def generate_costmap_callback(self, goal_handle):
+        self.get_logger().info("in generate_costmap_callback:start")
         print('in generate_costmap_callback:start')
         goal_handle.succeed()
 
         result = PlannerCostmap.Result()
 
         result.costmap.header.stamp = self.get_clock().now().to_msg()
-        result.costmap.header.frame_id = "map"
+        result.costmap.header.frame_id = "odom"
 
-        # 25m x 25m with 0.2m resolution
-        result.costmap.info.resolution = 0.2
-        result.costmap.info.width = 125
-        result.costmap.info.height = 125
+        # 30m x 30m with 0.1m resolution
+        result.costmap.info.resolution = 0.1
+        result.costmap.info.width = 300
+        result.costmap.info.height = 300
 
         # fully empty space
         result.costmap.data = [0] * (result.costmap.info.width * result.costmap.info.height)
@@ -98,7 +101,6 @@ class CostmapGeneratorMockLongCorridor(CostmapGeneratorMockBase):
 
         return result
 
-
 class PlanTrajectoryClientMock(rclpy.node.Node):
     def __init__(self):
         super().__init__('plan_trajectory_client_mock')
@@ -114,6 +116,70 @@ class PlanTrajectoryClientMock(rclpy.node.Node):
         print('wait for srver:plan_parking_trajectory')
         self._action_client.wait_for_server()
         print('srver:plan_parking_trajectory exists')
+        self._send_goal_future = self._action_client.send_goal_async(goal)
+        self._send_goal_future.add_done_callback(self.goal_response_callback)
+        rclpy.spin_until_future_complete(self, self._send_goal_future)
+
+    def goal_response_callback(self, future):
+        goal_handle = future.result()
+        if not goal_handle.accepted:
+            return
+
+        self._get_result_future = goal_handle.get_result_async()
+        self._get_result_future.add_done_callback(self.get_result_callback)
+        rclpy.spin_until_future_complete(self, self._get_result_future)
+
+    def get_result_callback(self, future):
+        self._result = future.result().result
+
+class GenerateCostmapClientMock(rclpy.node.Node):
+    def __init__(self):
+        super().__init__('generate_costmap_client_mock')
+        self._action_client = ActionClient(
+            self,
+            PlannerCostmap,
+            '/planning/generate_costmap')
+        self._send_goal_future = None
+        self._get_result_future = None
+        self._result = None
+
+    def send_goal(self, goal):
+        print('wait for srver:generate_costmap')
+        self._action_client.wait_for_server()
+        print('srver:generate_costmap exists')
+        self._send_goal_future = self._action_client.send_goal_async(goal)
+        self._send_goal_future.add_done_callback(self.goal_response_callback)
+        rclpy.spin_until_future_complete(self, self._send_goal_future)
+
+    def goal_response_callback(self, future):
+        goal_handle = future.result()
+        if not goal_handle.accepted:
+            return
+
+        self._get_result_future = goal_handle.get_result_async()
+        self._get_result_future.add_done_callback(self.get_result_callback)
+        # rclpy.spin_until_future_complete(self, self._get_result_future)
+
+    def get_result_callback(self, future):
+        print("get_result_callback")
+        self._result = future.result().result
+        rclpy.shutdown()
+
+class GlobalPathMappingClientMock(rclpy.node.Node):
+    def __init__(self):
+        super().__init__('global_path_planning_clien_mock')
+        self._action_client = ActionClient(
+            self,
+            GlobalPathMappingAction,
+            '/planning/global_path_mapping_service')
+        self._send_goal_future = None
+        self._get_result_future = None
+        self._result = None
+
+    def send_goal(self, goal):
+        print('wait for srver:global_path_mapping_service')
+        self._action_client.wait_for_server()
+        print('srver:global_path_mapping_service exists')
         self._send_goal_future = self._action_client.send_goal_async(goal)
         self._send_goal_future.add_done_callback(self.goal_response_callback)
         rclpy.spin_until_future_complete(self, self._send_goal_future)
@@ -217,6 +283,10 @@ class TestBasicUsage(unittest.TestCase):
 
         self.assert_start_and_goal_positions_correct(result, goal)
     
+    def test_basic_case_works_global_path_mapping(self, freespace_planner_node):
+        costmap_generator = CostmapGeneratorMockSmallSquare()
+        rclpy.spin(costmap_generator)
+
     def test_basic_case_works_object_collision(self, freespace_planner_node):
         costmap_generator = CostmapGeneratorMockSmallSquare()
 
@@ -275,6 +345,7 @@ if __name__ == '__main__':
 
     tuc = TestBasicUsage()
     tuc.setUp()
-    tuc.test_basic_case_works('')
+    tuc.test_basic_case_works_global_path_mapping(freespace_planner_node)
+    # tuc.test_basic_case_works('')
     # tuc.test_basic_case_works_object_collision('')
     

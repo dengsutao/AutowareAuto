@@ -24,7 +24,7 @@ def generate_launch_description():
     """Launch freespace_planner with default configuration."""
     # -------------------------------- Nodes-----------------------------------
     freespace_planner_node = launch_ros.actions.Node(
-        package='freespace_planner',
+        package='freespace_planner_nodes',
         executable='freespace_planner_node_exe',
         name='freespace_planner',
         namespace='planning',

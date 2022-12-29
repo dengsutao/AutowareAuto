@@ -56,6 +56,8 @@ const std::string url_walking_prefix = "https://restapi.amap.com/v5/direction/wa
 const std::string url_to_gaode_coord = "https://restapi.amap.com/v3/assistant/coordinate/convert?";
 //静态地图
 const std::string url_static_map = "https://restapi.amap.com/v3/staticmap?";
+//输入提示
+const std::string url_tips = "https://restapi.amap.com/v3/assistant/inputtips?";
 
 const std::string apikey = "29ad5efe8c382d9f42e70a246748d0ce";
 
@@ -334,7 +336,6 @@ void GaodeApiGlobalPlannerNode::send_global_path(
     const vector<sensor_msgs::msg::NavSatFix> & gps_route,
     const std_msgs::msg::Header & header)
 {
-  // the maximum of PlanTrajectory message is 100
   if (gps_route.size() > 10000) {
     RCLCPP_ERROR(this->get_logger(), "Route size is exceeded the limit of 10000");
     return;

@@ -30,8 +30,9 @@ ament_auto_add_library(${GB_PLANNER_NODE_LIB} SHARED
   3rd/GeographicLib/src/Geocentric.cpp
   3rd/GeographicLib/src/Math.cpp
 )
-target_link_libraries(${GB_PLANNER_NODE_LIB} cpr::cpr)
+
 target_link_libraries(${GB_PLANNER_NODE_LIB} jsoncpp)
+target_link_libraries(${GB_PLANNER_NODE_LIB} cpr::cpr)
 autoware_set_compile_options(${GB_PLANNER_NODE_LIB})
 
 set(GB_PLANNER_NODE_EXE ${GB_PLANNER_NODE_LIB}_exe)

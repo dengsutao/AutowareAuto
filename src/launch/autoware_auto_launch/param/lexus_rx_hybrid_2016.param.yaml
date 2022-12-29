@@ -16,5 +16,5 @@
       mass_vehicle: 2120.0 # Measured from SVL
       inertia_yaw_kg_m2: 12.0  # Taken from AVP demo params, can't verify
       maximum_turning_angle_rad: 0.53
-
+      guide_dog_cg2back: 1.0
 

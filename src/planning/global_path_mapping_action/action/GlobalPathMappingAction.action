@@ -1,0 +1,7 @@
+nav_msgs/OccupancyGrid occupancy_grid
+gaode_api_route_msgs/GaodeApiRoute gaode_api_route
+geometry_msgs/TransformStamped tf_odom2baselink
+---
+gaode_api_route_msgs/GaodeApiRoute result
+---
+gaode_api_route_msgs/GaodeApiRoute feedback

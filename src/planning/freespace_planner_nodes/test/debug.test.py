@@ -62,15 +62,21 @@ class CostmapGeneratorMockSmallSquare(CostmapGeneratorMockBase):
         result = PlannerCostmap.Result()
 
         result.costmap.header.stamp = self.get_clock().now().to_msg()
-        result.costmap.header.frame_id = "map"
+        result.costmap.header.frame_id = "odom"
+        result.costmap.info.map_load_time = result.costmap.header.stamp
 
-        # 25m x 25m with 0.2m resolution
-        result.costmap.info.resolution = 0.2
-        result.costmap.info.width = 125
-        result.costmap.info.height = 125
+        # 30m x 30m with 0.1m resolution
+        result.costmap.info.resolution = 0.1
+        result.costmap.info.width = 300
+        result.costmap.info.height = 300
 
         # fully empty space
         result.costmap.data = [0] * (result.costmap.info.width * result.costmap.info.height)
+        for i in range(160):
+            for j in range(0,50):
+                result.costmap.data[i*300+j] = 100
+            for j in range(160,300):
+                result.costmap.data[i*300+j] = 100
 
         print('in generate_costmap_callback:returned')
         return result

@@ -110,8 +110,10 @@ public:
   bool8_t to_gaode_gps(
     std::string & gps_str,
     bool8_t is_start);
-  bool8_t visualize(const gaode_api_route_msgs::msg::GaodeApiRoute & msg);
-  bool8_t parse(std::string & url, Json::Value & data);
+  bool8_t visualize(
+    const gaode_api_route_msgs::msg::GaodeApiRoute & msg);
+  bool8_t parse(
+    std::string & url, Json::Value & data);
 
 
 private:

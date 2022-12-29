@@ -189,14 +189,14 @@ def generate_launch_description():
     
 
     return launch.LaunchDescription([
-        vehicle_characteristics_param,
+        # vehicle_characteristics_param,
         vehicle_constants_manager_param,
-        costmap_generator_param,
+        # costmap_generator_param,
         freespace_planner_param,
-        behavior_planner_param,
-        eskf_runner,
-        gaode_api_global_planner_node_runner,
-        costmap_generator,
+        # behavior_planner_param,
+        # eskf_runner,
+        # gaode_api_global_planner_node_runner,
+        # costmap_generator,
         freespace_planner,
-        behavior_planner,
+        # behavior_planner,
     ])

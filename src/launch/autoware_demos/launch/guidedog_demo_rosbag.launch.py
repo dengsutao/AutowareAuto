@@ -120,7 +120,7 @@ def generate_launch_description():
     #"/localization/init_gps"
     eskf_runner = Node(
         package='eskf',
-        executable='eskf_node',
+        executable='eskf_node_exe',
         namespace='localization',
         parameters=[{
             'mode': 0,
@@ -275,6 +275,13 @@ def generate_launch_description():
         ]
     )
 
+    global_path_mapping = Node(
+        package='global_path_mapping',
+        executable='global_path_mapping_node_exe',
+        name='global_path_mapping',
+        namespace='planning',
+    )
+
     return launch.LaunchDescription([
         vehicle_characteristics_param,
         vehicle_constants_manager_param,
@@ -291,5 +298,6 @@ def generate_launch_description():
         single_camera_robot_state_publisher_runner,
         freespace_planner,
         # behavior_planner,
-        # rviz_runner,
+        rviz_runner,
+        global_path_mapping
     ])

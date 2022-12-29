@@ -34,6 +34,8 @@
 #include <geometry_msgs/msg/pose_array.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <nav_msgs/msg/occupancy_grid.hpp>
+#include <global_path_mapping_action/action/global_path_mapping_action.hpp>
+#include <gaode_api_route_msgs/msg/gaode_api_route.hpp>
 
 #include <deque>
 #include <memory>
@@ -69,6 +71,9 @@ private:
   using GoalHandle = rclcpp_action::ServerGoalHandle<PlanTrajectoryAction>;
   using PlannerCostmapAction = autoware_auto_planning_msgs::action::PlannerCostmap;
   using PlannerCostmapGoalHandle = rclcpp_action::ClientGoalHandle<PlannerCostmapAction>;
+  using GlobalPathMappingAction = global_path_mapping_action::action::GlobalPathMappingAction;
+  using GlobalPathMappingGoalHandle = rclcpp_action::ClientGoalHandle<GlobalPathMappingAction>;
+  using GaodeApiRoute = gaode_api_route_msgs::msg::GaodeApiRoute;
 
   // ros communication
   rclcpp_action::Client<PlannerCostmapAction>::SharedPtr map_client_;
@@ -104,7 +109,15 @@ private:
     const std::shared_ptr<const PlannerCostmapAction::Feedback>)
   {
   }
-  void resultCallback(const PlannerCostmapGoalHandle::WrappedResult & result);
+  void resultCallback(const PlannerCostmapGoalHandle::WrappedResult & costmap_result);
+
+  // global_path_mapping client
+  rclcpp_action::Client<GlobalPathMappingAction>::SharedPtr global_path_mapping_client_;
+  void gpm_goalResponseCallback(std::shared_future<GlobalPathMappingGoalHandle::SharedPtr> future);
+  void gpm_feedbackCallback(
+    GlobalPathMappingGoalHandle::SharedPtr,
+    const std::shared_ptr<const GlobalPathMappingAction::Feedback> feedback);
+  void gpm_resultCallback(const GlobalPathMappingGoalHandle::WrappedResult){}
 
   // functions
   void reset();

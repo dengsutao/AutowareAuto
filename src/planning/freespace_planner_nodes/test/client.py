@@ -25,30 +25,10 @@ from ament_index_python import get_package_share_directory
 import rclpy
 from rclpy.action import ActionClient
 
-from launch import LaunchDescription
-import launch_ros.actions
-import launch_testing
-import tf2_ros
-
 import os
 import time
 import unittest
-
-
-class TransformBroadcaster(rclpy.node.Node):
-    def __init__(self):
-        super().__init__('transform_broadcaster')
-        self._broadcaster = tf2_ros.TransformBroadcaster(self)
-
-    def broadcast_transform(self):
-        t = TransformStamped()
-
-        t.header.stamp = self.get_clock().now().to_msg()
-        t.header.frame_id = 'map'
-        t.child_frame_id = 'base_link'
-
-        self._broadcaster.sendTransform(t)
-
+import tf2_ros
 
 class HADMapServiceMock(rclpy.node.Node):
     def __init__(self):
@@ -130,6 +110,19 @@ class HADMapServiceMock(rclpy.node.Node):
 
         return response
 
+class TransformBroadcaster(rclpy.node.Node):
+    def __init__(self):
+        super().__init__('transform_broadcaster')
+        self._broadcaster = tf2_ros.TransformBroadcaster(self)
+
+    def broadcast_transform(self):
+        t = TransformStamped()
+
+        t.header.stamp = self.get_clock().now().to_msg()
+        t.header.frame_id = 'odom'
+        t.child_frame_id = 'base_link'
+
+        self._broadcaster.sendTransform(t)
 
 class GenerateCostmapClientMock(rclpy.node.Node):
     def __init__(self):
@@ -161,47 +154,18 @@ class GenerateCostmapClientMock(rclpy.node.Node):
         self._result = future.result().result
 
 
-def generate_test_description():
-    costmap_generator_node = launch_ros.actions.Node(
-        package='costmap_generator_nodes',
-        executable='costmap_generator_node_exe',
-        parameters=[os.path.join(
-            get_package_share_directory('costmap_generator_nodes'),
-            'param/test.param.yaml'
-        )],
-        remappings=[
-            ('~/client/HAD_Map_Service', '/HAD_Map_Service')
-        ]
-    )
-
-    context = {'costmap_generator_node': costmap_generator_node}
-
-    return LaunchDescription([
-        # costmap generator - tested node
-        costmap_generator_node,
-        # Start tests right away - no need to wait for anything
-        launch_testing.actions.ReadyToTest()]
-    ), context
-
-
 class TestBasicUsage(unittest.TestCase):
     def test_basic_case_works(self):
         rclpy.init()
-
         had_map_service = HADMapServiceMock()
-
         generate_costmap_client = GenerateCostmapClientMock()
-
         tf_broadcaster = TransformBroadcaster()
-
-        # costmap generator requires "base_link" -> "map" transform to initialize
         for i in range(0, 20):
             tf_broadcaster.broadcast_transform()
             time.sleep(0.1)
-        
         goal = PlannerCostmap.Goal()
         goal.route.header.stamp = generate_costmap_client.get_clock().now().to_msg()
-        goal.route.header.frame_id = "map"
+        goal.route.header.frame_id = "odom"
         # short route because mocked lanelet is very small
         goal.route.start_pose.position.x = 10.0
         goal.route.start_pose.position.y = 12.5
@@ -210,41 +174,16 @@ class TestBasicUsage(unittest.TestCase):
         
         generate_costmap_client.send_goal(goal)
         print('finish goal send.')
-
         while not generate_costmap_client._result:
             print('wait for result.')
             rclpy.spin_once(had_map_service)
             time.sleep(0.1)
+        
         result = generate_costmap_client._result
-
         print('results received.')
-
-        # # configured values
-        # self.assertEqual(result.costmap.header.frame_id, "map")
-        # self.assertTrue(abs(result.costmap.info.resolution - 0.2) < 0.001)
-
-        # # non-zero dimensions and non-empty data
-        # self.assertTrue(result.costmap.info.width > 0)
-        # self.assertTrue(result.costmap.info.height > 0)
-        # self.assertTrue(len(result.costmap.data) > 0)
-
-        # # trimmed size - it means smaller than configured
-        # self.assertTrue(result.costmap.info.width < 70)
-        # self.assertTrue(result.costmap.info.height < 70)
 
         return
 
 if __name__ == '__main__':
-    # costmap_generator_node = launch_ros.actions.Node(
-    #     package='costmap_generator_nodes',
-    #     executable='costmap_generator_node_exe',
-    #     parameters=[os.path.join(
-    #         get_package_share_directory('costmap_generator_nodes'),
-    #         'param/test.param.yaml'
-    #     )],
-    #     remappings=[
-    #         ('~/client/HAD_Map_Service', '/HAD_Map_Service')
-    #     ]
-    # )
     tbu = TestBasicUsage()
     tbu.test_basic_case_works()
