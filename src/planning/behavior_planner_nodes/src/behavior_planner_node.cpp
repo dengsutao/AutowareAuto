@@ -185,7 +185,7 @@ void BehaviorPlannerNode::result_callback(const PlanTrajectoryGoalHandle::Wrappe
   }
 
   auto trajectory = result.result->trajectory;
-  trajectory.header.frame_id = "map";
+  trajectory.header.frame_id = "odom";
   m_debug_trajectory_pub->publish(trajectory);
 
   m_planner->set_trajectory(result.result->trajectory);
@@ -293,44 +293,26 @@ void BehaviorPlannerNode::on_ego_state(const State::SharedPtr & msg)
     return;
   }
 
-  const auto desired_gear = m_planner->get_desired_gear(m_ego_state);
-  if (desired_gear != m_current_gear) {
-    auto & clock = *this->get_clock();
-    RCLCPP_INFO_THROTTLE(
-      get_logger(), clock, 3000,
-      "Trying to change gear, current gear is %d, desired gear is %d.",
-      static_cast<int>(m_current_gear), static_cast<int>(desired_gear));
+ 
+  auto trajectory = m_planner->get_trajectory(m_ego_state);
+  // trajectory.header = m_ego_state.header;
+  trajectory.header.frame_id = "odom";
+  trajectory.header.stamp = msg->header.stamp;
 
-    GearCommand gear_command;
-    gear_command.command = desired_gear;
-    gear_command.stamp = msg->header.stamp;
-    m_gear_command_pub->publish(gear_command);
-    // send trajectory with current state so that velocity will be zero in order to change gear
-    Trajectory trajectory;
-    trajectory.header.frame_id = "map";
-    trajectory.header.stamp = msg->header.stamp;
-    trajectory.points.push_back(msg->state);
-    m_trajectory_pub->publish(trajectory);
+  // If object collision estimation is enabled, send trajectory through the collision estimator
+  if (m_modify_trajectory_client) {
+    auto request = std::make_shared<ModifyTrajectory::Request>();
+    request->original_trajectory = trajectory;
+    auto result =
+      m_modify_trajectory_client->async_send_request(
+      request,
+      std::bind(
+        &BehaviorPlannerNode::modify_trajectory_response,
+        this, std::placeholders::_1));
   } else {
-    auto trajectory = m_planner->get_trajectory(m_ego_state);
-    // trajectory.header = m_ego_state.header;
-    trajectory.header.frame_id = "map";
-    trajectory.header.stamp = msg->header.stamp;
-
-    // If object collision estimation is enabled, send trajectory through the collision estimator
-    if (m_modify_trajectory_client) {
-      auto request = std::make_shared<ModifyTrajectory::Request>();
-      request->original_trajectory = trajectory;
-      auto result =
-        m_modify_trajectory_client->async_send_request(
-        request,
-        std::bind(
-          &BehaviorPlannerNode::modify_trajectory_response,
-          this, std::placeholders::_1));
-    } else {
-      m_trajectory_pub->publish(trajectory);
-    }
+    m_trajectory_pub->publish(trajectory);
   }
+  
 }
 
 void BehaviorPlannerNode::on_gear_report(const GearReport::SharedPtr & msg)

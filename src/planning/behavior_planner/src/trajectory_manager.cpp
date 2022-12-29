@@ -49,40 +49,41 @@ void TrajectoryManager::set_trajectory(const Trajectory & trajectory)
 void TrajectoryManager::set_sub_trajectories()
 {
   // return sign with hysterysis buffer
-  const auto is_positive = [](const TrajectoryPoint & pt) {
-      // using epsilon instead to ensure change in sign.
-      static bool8_t is_prev_positive = true;
-      bool8_t is_positive;
-      if (is_prev_positive) {
-        is_positive = pt.longitudinal_velocity_mps > -std::numeric_limits<float32_t>::epsilon();
-      } else {
-        is_positive = pt.longitudinal_velocity_mps > std::numeric_limits<float32_t>::epsilon();
-      }
-      is_prev_positive = is_positive;
-      return is_positive;
-    };
+  // const auto is_positive = [](const TrajectoryPoint & pt) {
+  //     // using epsilon instead to ensure change in sign.
+  //     static bool8_t is_prev_positive = true;
+  //     bool8_t is_positive;
+  //     if (is_prev_positive) {
+  //       is_positive = pt.longitudinal_velocity_mps > -std::numeric_limits<float32_t>::epsilon();
+  //     } else {
+  //       is_positive = pt.longitudinal_velocity_mps > std::numeric_limits<float32_t>::epsilon();
+  //     }
+  //     is_prev_positive = is_positive;
+  //     return is_positive;
+  //   };
 
-  if (m_trajectory.points.empty()) {
-    m_sub_trajectories.push_back(m_trajectory);
-    return;
-  }
+  // if (m_trajectory.points.empty()) {
+  //   m_sub_trajectories.push_back(m_trajectory);
+  //   return;
+  // }
 
-  Trajectory sub_trajectory;
-  sub_trajectory.header = m_trajectory.header;
+  // Trajectory sub_trajectory;
+  // sub_trajectory.header = m_trajectory.header;
 
-  auto prev_sign = is_positive(m_trajectory.points.front());
-  for (auto & pt : m_trajectory.points) {
-    const auto sign = is_positive(pt);
-    if (prev_sign != sign && !sub_trajectory.points.empty()) {
-      m_sub_trajectories.push_back(sub_trajectory);
-      sub_trajectory.points.clear();
-    }
-    sub_trajectory.points.push_back(pt);
-    prev_sign = sign;
-  }
-  if (!sub_trajectory.points.empty()) {
-    m_sub_trajectories.push_back(sub_trajectory);
-  }
+  // auto prev_sign = is_positive(m_trajectory.points.front());
+  // for (auto & pt : m_trajectory.points) {
+  //   const auto sign = is_positive(pt);
+  //   if (prev_sign != sign && !sub_trajectory.points.empty()) {
+  //     m_sub_trajectories.push_back(sub_trajectory);
+  //     sub_trajectory.points.clear();
+  //   }
+  //   sub_trajectory.points.push_back(pt);
+  //   prev_sign = sign;
+  // }
+  // if (!sub_trajectory.points.empty()) {
+  //   m_sub_trajectories.push_back(sub_trajectory);
+  // }
+  m_sub_trajectories.push_back(m_trajectory);
 }
 
 bool8_t TrajectoryManager::is_trajectory_ready()
@@ -181,17 +182,17 @@ void TrajectoryManager::set_time_from_start(Trajectory * trajectory)
 
 Trajectory TrajectoryManager::get_trajectory(const State & state)
 {
-  // select new sub_trajectory when vehicle is at stop
-  if (std::abs(state.state.longitudinal_velocity_mps) < m_config.stop_velocity_thresh) {
-    const auto & last_point = m_sub_trajectories.at(m_selected_trajectory).points.back();
-    const auto distance = norm_2d(minus_2d(last_point, state.state));
+  // // select new sub_trajectory when vehicle is at stop
+  // if (std::abs(state.state.longitudinal_velocity_mps) < m_config.stop_velocity_thresh) {
+  //   const auto & last_point = m_sub_trajectories.at(m_selected_trajectory).points.back();
+  //   const auto distance = norm_2d(minus_2d(last_point, state.state));
 
-    // increment index to select new sub_trajectory if vehicle has arrived the end of sub_trajectory
-    if (distance < m_config.goal_distance_thresh) {
-      m_selected_trajectory++;
-      m_selected_trajectory = std::min(m_selected_trajectory, m_sub_trajectories.size() - 1);
-    }
-  }
+  //   // increment index to select new sub_trajectory if vehicle has arrived the end of sub_trajectory
+  //   if (distance < m_config.goal_distance_thresh) {
+  //     m_selected_trajectory++;
+  //     m_selected_trajectory = std::min(m_selected_trajectory, m_sub_trajectories.size() - 1);
+  //   }
+  // }
 
   // TODO(mitsudome-r) implement trajectory refine functions if needed to integrate with controller
   const auto & input = m_sub_trajectories.at(m_selected_trajectory);

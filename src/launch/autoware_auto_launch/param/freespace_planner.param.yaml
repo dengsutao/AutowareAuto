@@ -22,7 +22,7 @@
     obstacle_threshold: 100
 
     astar:
-      use_back: true
+      use_back: false
       use_reeds_shepp: true
       only_behind_solutions: false
       distance_heuristic_weight: 1.0
