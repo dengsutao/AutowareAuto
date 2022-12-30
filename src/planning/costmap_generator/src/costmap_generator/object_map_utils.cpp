@@ -64,7 +64,7 @@ void fillPolygonAreas(
 
   for (const auto & points : in_area_points) {
     std::vector<cv::Point> cv_polygon;
-
+    
     for (const auto & p : points) {
       // transform to GridMap coordinate
       geometry_msgs::msg::Point transformed_point;
@@ -91,6 +91,19 @@ void fillPolygonAreas(
 
     merged_filled_image &= filled_image;
   }
+
+  //remove guide dog obstacle
+  std::vector<cv::Point> cv_polygon;
+  cv_polygon.emplace_back(-0.2/out_grid_map.getResolution(), -0.4/out_grid_map.getResolution());//left bottom
+  cv_polygon.emplace_back(0.2/out_grid_map.getResolution(), -0.4/out_grid_map.getResolution());//right bottom
+  cv_polygon.emplace_back(0.2/out_grid_map.getResolution(), 0.4/out_grid_map.getResolution());//right top
+  cv_polygon.emplace_back(-0.2/out_grid_map.getResolution(), 0.4/out_grid_map.getResolution());//left top
+  std::vector<std::vector<cv::Point>> cv_polygons;
+  cv_polygons.push_back(cv_polygon);
+  assert(in_fill_color == 0);
+  cv::fillPoly(merged_filled_image, cv_polygons, cv::Scalar(1));
+
+
 
   // convert to ROS msg
   grid_map::GridMapCvConverter::addLayerFromImage<unsigned char, 1>(
