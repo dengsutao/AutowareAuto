@@ -411,8 +411,8 @@ void FreespacePlannerNode::gpm_feedbackCallback(
 
   auto planning_result = std::make_shared<PlanTrajectoryAction::Result>();
 
-  // bool success = planTrajectory();
-  bool success = false;
+  bool success = planTrajectory();
+  // bool success = false;
 
   if (success) {
     visualizeTrajectory();
