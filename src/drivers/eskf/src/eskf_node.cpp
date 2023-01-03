@@ -569,11 +569,13 @@ bool eskf::record()
     double delta_t = curr_time - last_time;
     double curr_e = pose_(0,3);
     double curr_n = pose_(1,3);
-    double curr_u = pose_(2,3);
+    // double curr_u = pose_(2,3);
+    double curr_u = 0.0;
 
     double last_e = last_pose_(0,3);
     double last_n = last_pose_(1,3);
-    double last_u = last_pose_(2,3);
+    // double last_u = last_pose_(2,3);
+    double last_u = 0.0;
 
     double velo_e = (curr_e - last_e) / delta_t;
     double velo_n = (curr_n - last_n) / delta_t;
@@ -630,15 +632,22 @@ bool eskf::record()
     fused_pose.child_frame_id = "base_link";
     auto duration = cur_stamp - init_stamp;
     fused_pose.header.stamp = rclcpp::Time(0,0) + duration;
+    
     // fused_pose.header.stamp = cur_stamp; 
+    // odom to base_link 不包含旋转
+    // Eigen::Quaterniond q = Eigen::AngleAxisd(curr_imu_data.angle.z(), Eigen::Vector3d::UnitZ()) * 
+    //                         Eigen::AngleAxisd(0.0, Eigen::Vector3d::UnitY()) * 
+    //                         Eigen::AngleAxisd(0.0, Eigen::Vector3d::UnitX());
+    // geometry_msgs::msg::Quaternion imu_quat;
+    // imu_quat.w = q.w();
+    // imu_quat.x = q.x();
+    // imu_quat.y = q.y();
+    // imu_quat.z = q.z();
 
     fused_pose.pose.pose.position.x = curr_e;
     fused_pose.pose.pose.position.y = curr_n;
     fused_pose.pose.pose.position.z = curr_u;
-    fused_pose.pose.pose.orientation.w = curr_imu_data.quat.w();
-    fused_pose.pose.pose.orientation.x = curr_imu_data.quat.x();
-    fused_pose.pose.pose.orientation.y = curr_imu_data.quat.y();
-    fused_pose.pose.pose.orientation.z = curr_imu_data.quat.z();
+    // fused_pose.pose.pose.orientation = imu_quat;
     fused_pose_pub->publish(fused_pose);
 
     auto now = get_clock()->now();
@@ -652,10 +661,7 @@ bool eskf::record()
     cur_pose.pose.position.x = curr_e;
     cur_pose.pose.position.y = curr_n;
     cur_pose.pose.position.z = curr_u;
-    cur_pose.pose.orientation.w = curr_imu_data.quat.w();
-    cur_pose.pose.orientation.x = curr_imu_data.quat.x();
-    cur_pose.pose.orientation.y = curr_imu_data.quat.y();
-    cur_pose.pose.orientation.z = curr_imu_data.quat.z();
+    // cur_pose.pose.orientation = imu_quat;
     cur_pose_pub->publish(cur_pose);    
 
     //publish tf
@@ -666,10 +672,7 @@ bool eskf::record()
     t.transform.translation.x = curr_e;
     t.transform.translation.y = curr_n;
     t.transform.translation.z = curr_u;
-    t.transform.rotation.w = curr_imu_data.quat.w();
-    t.transform.rotation.x = curr_imu_data.quat.x();
-    t.transform.rotation.y = curr_imu_data.quat.y();
-    t.transform.rotation.z = curr_imu_data.quat.z();
+    // t.transform.rotation = imu_quat;
     tf_broadcaster_->sendTransform(t);
 
     //publish autoware_auto_vehicle_msgs::msg::VehicleKinematicState

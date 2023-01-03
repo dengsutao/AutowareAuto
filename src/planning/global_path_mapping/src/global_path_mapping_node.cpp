@@ -94,11 +94,11 @@ TransformStamped tf_inverse(TransformStamped & tf)
 GlobalPathMappingNode::GlobalPathMappingNode(const rclcpp::NodeOptions & options)
 :  Node("global_path_mapping", options)
 {
-  declare_parameter<float64_t>("distance_th", 5.0);
+  // declare_parameter<float64_t>("distance_th", 5.0);
   declare_parameter<float64_t>("len_forward_per_step", 2.0);
   // declare_parameter<float64_t>("distance_obj_th", 1.0);
-  debug_occupancy_grid_publisher_ =
-    this->create_publisher<nav_msgs::msg::OccupancyGrid>("/debug/occupancy_grid", 1);
+  // debug_occupancy_grid_publisher_ =
+  //   this->create_publisher<nav_msgs::msg::OccupancyGrid>("/debug/occupancy_grid", 1);
   // Action server
   mapping_action_server_ = rclcpp_action::create_server<GlobalPathMappingAction>(
     this->get_node_base_interface(), this->get_node_clock_interface(),
@@ -133,16 +133,17 @@ void GlobalPathMappingNode::handleAccepted(
   auto feedback = std::make_shared<GlobalPathMappingAction::Feedback>();
   auto result = std::make_shared<GlobalPathMappingAction::Result>();
 
-  float64_t distance_th = get_parameter("distance_th").as_double();
-  // float64_t distance_obj_th = get_parameter("distance_obj_th").as_double();
   goal_handle_ = goal_handle;
   cur_grid_ = goal_handle_->get_goal()->occupancy_grid;
   cur_route_ = goal_handle_->get_goal()->gaode_api_route;
-  auto num_route_point = cur_route_.enu_route.size();
   cur_tf_ = goal_handle_->get_goal()->tf_odom2baselink;
 
   //publish 
-  debug_occupancy_grid_publisher_->publish(cur_grid_);
+  // RCLCPP_INFO(get_logger(), "occupancy_grid pose:"+
+  //     std::to_string(cur_grid_.info.origin.position.x)+","+
+  //     std::to_string(cur_grid_.info.origin.position.y)+","+
+  //     std::to_string(cur_grid_.info.origin.position.z));
+  // debug_occupancy_grid_publisher_->publish(cur_grid_);
 
   // first, do transform to each gps point(odom->base_link)
   for (auto it = cur_route_.enu_route.begin();it!=cur_route_.enu_route.end();it++)
@@ -155,51 +156,9 @@ void GlobalPathMappingNode::handleAccepted(
   map_w = static_cast<size_t>(cur_grid_.info.width);
   map_h = static_cast<size_t>(cur_grid_.info.height);
   resolution = static_cast<float64_t>(cur_grid_.info.resolution);
-  // a new route
-  // if (goal_handle_->get_goal()->is_new)
-  // {
-  //   pose_id_ = 0;
-  //   auto pose0 = cur_route_.enu_route[0];
-  //   auto dist = distance(cur_pose_, pose0);
-  //   if (dist>distance_th)
-  //   {
-  //     RCLCPP_WARN(get_logger(),
-  //     "distance between current pose and start of global path is larger than %f, which is %f", 
-  //     distance_th, dist);
-  //     return;
-  //   }
-  // }
 
-  Eigen::Vector2d cur_pose;
-  cur_pose.x() = cur_pose_.position.x;
-  cur_pose.y() = cur_pose_.position.y;
-
+  Eigen::Vector2d cur_pose{0,0};
   Eigen::Vector2d target_pose;
-  Eigen::Vector2d cur_normal_object_pose;
-  Eigen::Vector2d target_normal_object_pose;
-  // check current pose, if it's closed to the end pose of current route, judge whether to change to next route
-  auto dist = distance(cur_pose_, cur_route_.enu_route[pose_id_+1]);
-  if (dist<distance_th)
-  {
-    if (pose_id_==num_route_point-2)
-    {
-      RCLCPP_DEBUG(get_logger(), "reach the end of the whole route!");
-      feedback->feedback.start_enu_pose.position.x = 0;
-      feedback->feedback.start_enu_pose.position.y = 0;
-      goal_handle_->publish_feedback(feedback);
-      goal_handle_->succeed(result);
-      return;
-    }
-    pose_id_+=1;
-    // Eigen::Vector2d next_route_direction = direction(cur_route_.enu_route[pose_id_+1].position, cur_route_.enu_route[pose_id_+2].position);
-    // // maybe need to shorten the search distance!!
-    // Eigen::Vector2d object_pose;
-    // if (!find_object_with_direction(cur_pose, object_pose, next_route_direction, 1))
-    // {
-    //   // no object in this direction, can change to next route
-    //   pose_id_+=1;
-    // }
-  }
 
   // direction and normal direction
   Eigen::Vector2d cur_route_direction = direction(cur_route_.enu_route[pose_id_].position, cur_route_.enu_route[pose_id_+1].position);
@@ -212,7 +171,7 @@ void GlobalPathMappingNode::handleAccepted(
   
   Eigen::Vector2d front_pose, right_pose, left_pose, final_pose;
   float64_t front_dist, right_dist, left_dist;
-  float64_t min_dist=100000;
+  float64_t min_dist=1e8;
   bool is_find=false;
   if (find_no_obj_with_direction(target_pose, front_pose, cur_route_direction, front_dist, 1) && min_dist>front_dist)
   {
@@ -239,27 +198,6 @@ void GlobalPathMappingNode::handleAccepted(
     return;
   }
   target_pose = final_pose;
-
-
-
-  // bool is_cur_obj_find = find_object_with_direction(cur_pose, cur_normal_object_pose, cur_route_direction_normal, 1);
-  // if (is_cur_obj_find && distance(cur_pose, cur_normal_object_pose)<distance_obj_th)
-  // {
-  //   cur_normal_object_pose = cur_pose;
-  // }
-  // if (find_object_with_direction(target_pose, target_normal_object_pose, cur_route_direction_normal, 1))
-  // {
-  //   auto dist_to_th = distance(target_pose, target_normal_object_pose) - distance_obj_th;
-  //   if (dist_to_th<0)
-  //   {
-  //     Eigen::Vector2d cur_route_direction_normal_left = -cur_route_direction_normal;
-  //     target_pose = target_pose - dist_to_th * cur_route_direction_normal_left;
-  //   }
-  //   else
-  //   {
-  //     target_pose = target_pose + dist_to_th * cur_route_direction_normal;
-  //   }
-  // }
   
   auto inverse_tf = tf_inverse(cur_tf_);
   feedback->feedback.start_enu_pose = to_pose(cur_pose);
@@ -298,7 +236,7 @@ bool8_t GlobalPathMappingNode::find_no_obj_with_direction(
   size_t int_y = static_cast<size_t>(y);
   // size_t start_x = int_x, start_y = int_y;
   // cur point not object
-  if (cur_grid_.data[int_y*map_w+int_x]==0)
+  if (cur_grid_.data[int_y*map_w+int_x]==100)
   {
     result_point.x() = start_point.x();
     result_point.y() = start_point.y();
@@ -314,7 +252,7 @@ bool8_t GlobalPathMappingNode::find_no_obj_with_direction(
     y = start_y + direction.y() * cur_dist;
     int_x = static_cast<size_t>(x);
     int_y = static_cast<size_t>(y);
-    if (cur_grid_.data[int_y*map_w+int_x]==0)
+    if (cur_grid_.data[int_y*map_w+int_x]==100)
     {
       result_point.x() = (static_cast<float64_t>(int_x)-x_offset)*resolution;
       result_point.y() = (static_cast<float64_t>(int_y)-y_offset)*resolution;
@@ -352,7 +290,7 @@ bool8_t GlobalPathMappingNode::find_object_with_direction(
     y += direction.y() * step;
     int_x = static_cast<size_t>(x);
     int_y = static_cast<size_t>(y);
-    if (cur_grid_.data[int_y*map_w+int_x]==100)
+    if (cur_grid_.data[int_y*map_w+int_x]==0)
     {
       label = true;
       break;

@@ -139,7 +139,7 @@ private:
   void handleAccepted(
     std::shared_ptr<rclcpp_action::ServerGoalHandle<PlannerCostmapAction>>);
 
-  grid_map::Position getCostmapToVehicleTranslation();
+  geometry_msgs::msg::TransformStamped getCostmapToVehicleTransform();
 
   /// \brief create map request for driveable area with bounds that are based on route
   HADMapService::Request createMapRequest(const HADMapRoute &) const;
@@ -157,6 +157,8 @@ private:
   bool isGenerating() const {return state_ == CostmapGeneratorNodeState::GENERATING;}
   void setIdleState() {state_ = CostmapGeneratorNodeState::IDLE;}
   void setGeneratingState() {state_ = CostmapGeneratorNodeState::GENERATING;}
+
+  PlannerCostmapAction::Result::SharedPtr result_;
 };
 
 }  // namespace costmap_generator

@@ -182,6 +182,8 @@ void BehaviorPlannerNode::result_callback(const PlanTrajectoryGoalHandle::Wrappe
     RCLCPP_INFO(get_logger(), "Received trajectory from planner");
   } else {
     RCLCPP_ERROR(get_logger(), "Planner failed to calculate!!");
+    m_requesting_trajectory = false;
+    return;
   }
 
   auto trajectory = result.result->trajectory;
@@ -293,26 +295,47 @@ void BehaviorPlannerNode::on_ego_state(const State::SharedPtr & msg)
     return;
   }
 
- 
-  auto trajectory = m_planner->get_trajectory(m_ego_state);
-  // trajectory.header = m_ego_state.header;
-  trajectory.header.frame_id = "odom";
-  trajectory.header.stamp = msg->header.stamp;
+  // const auto desired_gear = m_planner->get_desired_gear(m_ego_state);
+  // no need for change gear;
+  const auto desired_gear = m_current_gear;
+  if (desired_gear != m_current_gear) {
+    auto & clock = *this->get_clock();
+    RCLCPP_INFO_THROTTLE(
+      get_logger(), clock, 3000,
+      "Trying to change gear, current gear is %d, desired gear is %d.",
+      static_cast<int>(m_current_gear), static_cast<int>(desired_gear));
 
-  // If object collision estimation is enabled, send trajectory through the collision estimator
-  if (m_modify_trajectory_client) {
-    auto request = std::make_shared<ModifyTrajectory::Request>();
-    request->original_trajectory = trajectory;
-    auto result =
-      m_modify_trajectory_client->async_send_request(
-      request,
-      std::bind(
-        &BehaviorPlannerNode::modify_trajectory_response,
-        this, std::placeholders::_1));
-  } else {
+    GearCommand gear_command;
+    gear_command.command = desired_gear;
+    gear_command.stamp = msg->header.stamp;
+    m_gear_command_pub->publish(gear_command);
+    // send trajectory with current state so that velocity will be zero in order to change gear
+    Trajectory trajectory;
+    trajectory.header.frame_id = "odom";
+    trajectory.header.stamp = msg->header.stamp;
+    trajectory.points.push_back(msg->state);
     m_trajectory_pub->publish(trajectory);
+  } else {
+    auto trajectory = m_planner->get_trajectory(m_ego_state);
+    // trajectory.header = m_ego_state.header;
+    trajectory.header.frame_id = "odom";
+    trajectory.header.stamp = msg->header.stamp;
+
+    // If object collision estimation is enabled, send trajectory through the collision estimator
+    if (m_modify_trajectory_client) {
+      auto request = std::make_shared<ModifyTrajectory::Request>();
+      request->original_trajectory = trajectory;
+      auto result =
+        m_modify_trajectory_client->async_send_request(
+        request,
+        std::bind(
+          &BehaviorPlannerNode::modify_trajectory_response,
+          this, std::placeholders::_1));
+    } else {
+      RCLCPP_INFO(get_logger(), "publish trajectory");
+      m_trajectory_pub->publish(trajectory);
+    }
   }
-  
 }
 
 void BehaviorPlannerNode::on_gear_report(const GearReport::SharedPtr & msg)
@@ -329,11 +352,11 @@ void BehaviorPlannerNode::on_route(const GaodeApiRoute::SharedPtr & msg)
     return;
   }
 
-  if (!m_planner->is_vehicle_stopped(m_ego_state)) {
-    RCLCPP_ERROR(
-      get_logger(), "Route was rejected. Route cannot be update while the vehicle is moving");
-    return;
-  }
+  // if (!m_planner->is_vehicle_stopped(m_ego_state)) {
+  //   RCLCPP_ERROR(
+  //     get_logger(), "Route was rejected. Route cannot be update while the vehicle is moving");
+  //   return;
+  // }
 
   RCLCPP_INFO(get_logger(), "Received route");
 

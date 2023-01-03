@@ -121,7 +121,7 @@ visualization_msgs::msg::MarkerArray createLaneletVisualization(
 nav_msgs::msg::OccupancyGrid createOccupancyGrid(
   const grid_map::GridMap & costmap, const std::string & layer_name,
   autoware::planning::costmap_generator::CostmapGeneratorParams & costmap_params,
-  rclcpp::Clock::SharedPtr clock)
+  rclcpp::Clock::SharedPtr clock, geometry_msgs::msg::TransformStamped tf)
 {
   nav_msgs::msg::OccupancyGrid occupancy_grid;
 
@@ -136,6 +136,20 @@ nav_msgs::msg::OccupancyGrid createOccupancyGrid(
   header.stamp = clock->now();
   occupancy_grid.header = header;
 
+  geometry_msgs::msg::Transform msg_corner2baselink, msg_corner2odom, msg_baselink2odom;
+  msg_baselink2odom = tf.transform;
+  msg_corner2baselink.translation.x = -0.5 * costmap.getLength()[0];
+  msg_corner2baselink.translation.y = -0.5 * costmap.getLength()[1];
+  tf2::Transform tf2_corner2baselink, tf2_baselink2odom, tf2_corner2odom;
+  tf2::fromMsg(msg_corner2baselink, tf2_corner2baselink); 
+  tf2::fromMsg(msg_baselink2odom, tf2_baselink2odom);
+  tf2_corner2odom = tf2_corner2baselink * tf2_baselink2odom;
+  msg_corner2odom = tf2::toMsg(tf2_corner2odom);
+
+  occupancy_grid.info.origin.position.x = msg_corner2odom.translation.x;
+  occupancy_grid.info.origin.position.y = msg_corner2odom.translation.y;
+  occupancy_grid.info.origin.position.z = 0;
+  occupancy_grid.info.origin.orientation = msg_corner2odom.rotation;
   return occupancy_grid;
 }
 
@@ -268,13 +282,14 @@ void CostmapGeneratorNode::handleAccepted(
   
 
   goal_handle_ = goal_handle;
-
+  result_ = std::make_shared<PlannerCostmapAction::Result>();
   const rclcpp::Time msg_stamp{goal_handle_->get_goal()->route.header.stamp.sec, goal_handle_->get_goal()->route.header.stamp.nanosec};//rmflag
   const auto earliest_time = msg_stamp - kMaxLidarEgoStateStampDiff;
   const auto latest_time = msg_stamp + kMaxLidarEgoStateStampDiff;
   const auto matched_msgs = m_predict_objects_cache->getInterval(earliest_time, latest_time);
   if (matched_msgs.empty()) {
     RCLCPP_WARN(get_logger(), "No matching predicted objects msgs received");
+    goal_handle_->abort(result_);
     return;
   }
   //*(m_predict_objects_cache->cache_[0].getMessage())
@@ -312,14 +327,14 @@ HADMapService::Request CostmapGeneratorNode::createMapRequest(
   return request;
 }
 
-grid_map::Position CostmapGeneratorNode::getCostmapToVehicleTranslation()
+geometry_msgs::msg::TransformStamped CostmapGeneratorNode::getCostmapToVehicleTransform()
 {
   // Get current pose
   geometry_msgs::msg::TransformStamped tf = tf_buffer_.lookupTransform(
     costmap_params_.costmap_frame, vehicle_frame_, rclcpp::Time(0),
     rclcpp::Duration::from_seconds(1.0));
 
-  return grid_map::Position(tf.transform.translation.x, tf.transform.translation.y);
+  return tf;
 }
 
 void CostmapGeneratorNode::poResponse(
@@ -332,18 +347,19 @@ void CostmapGeneratorNode::poResponse(
   // autoware::common::had_map_utils::fromBinaryMsg(future.get()->map, lanelet_map_ptr);
 
   // Find translation from grid map to robots center position
-  grid_map::Position vehicle_to_grid_position;
+  geometry_msgs::msg::TransformStamped vehicle_to_grid_transform;
   try {
-    vehicle_to_grid_position = getCostmapToVehicleTranslation();
+    vehicle_to_grid_transform = getCostmapToVehicleTransform();
   } catch (tf2::TransformException & ex) {
     RCLCPP_ERROR(this->get_logger(), "Setting costmap position failure: %s", ex.what());
+    goal_handle_->abort(result_);
     return;
   }
   
   if(costmap_params_.costmap_frame != "odom" || map_frame_ != "odom"){
     RCLCPP_ERROR(this->get_logger(), "Costmap frame and map frame should both be odom.");
+    goal_handle_->abort(result_);
   }
-
 
   // Get odom to baselink transform
   geometry_msgs::msg::TransformStamped costmap_to_vehicle_transform;
@@ -353,18 +369,24 @@ void CostmapGeneratorNode::poResponse(
       rclcpp::Duration::from_seconds(1.0));
   } catch (tf2::TransformException & ex) {
     RCLCPP_ERROR(this->get_logger(), "Map to costmmap transform lookup failure: %s", ex.what());
+    goal_handle_->abort(result_);
     return;
   }
   
   // Generate costmap
   auto costmap = costmap_generator_->generateCostmap(predictedobjects, costmap_to_vehicle_transform);
-
   // Create result
   auto result = std::make_shared<PlannerCostmapAction::Result>();
   auto out_occupancy_grid =
-    createOccupancyGrid(costmap, LayerName::COMBINED, costmap_params_, get_clock());
+    createOccupancyGrid(costmap, LayerName::COMBINED, costmap_params_, get_clock(), vehicle_to_grid_transform);
+
   result->costmap = out_occupancy_grid;
 
+  RCLCPP_INFO(get_logger(), "occupancy_grid pose:"+
+      std::to_string(out_occupancy_grid.info.origin.position.x)+","+
+      std::to_string(out_occupancy_grid.info.origin.position.y)+","+
+      std::to_string(out_occupancy_grid.info.origin.position.z)+";"+
+      "frame_id:"+out_occupancy_grid.header.frame_id);
   // Publish visualizations
   // auto map_marker_array = createLaneletVisualization(lanelet_map_ptr);
   // debug_local_had_map_publisher_->publish(map_marker_array);

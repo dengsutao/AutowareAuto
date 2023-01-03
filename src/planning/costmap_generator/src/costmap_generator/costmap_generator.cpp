@@ -78,15 +78,34 @@ std::vector<geometry_msgs::msg::Point> poly2vector(const geometry_msgs::msg::Pol
 }
 
 // Convert from Point32 to Point
-std::vector<geometry_msgs::msg::Point> objectpoly2vector(const geometry_msgs::msg::Polygon & poly, double cx, double cy, double cz)
+// std::vector<geometry_msgs::msg::Point> objectpoly2vector(const geometry_msgs::msg::Polygon & poly, double cx, double cy, double cz)
+// {
+//   std::vector<geometry_msgs::msg::Point> ps;
+//   for (const auto & p32 : poly.points) {
+//     geometry_msgs::msg::Point p;
+//     p.x = p32.x + cx;
+//     p.y = p32.y + cy;
+//     p.z = p32.z + cz;
+//     ps.push_back(p);
+//   }
+//   return ps;
+// }
+std::vector<geometry_msgs::msg::Point> objectpoly2vector(const geometry_msgs::msg::Polygon & poly, const geometry_msgs::msg::Pose & pose)
 {
   std::vector<geometry_msgs::msg::Point> ps;
   for (const auto & p32 : poly.points) {
-    geometry_msgs::msg::Point p;
-    p.x = p32.x + cx;
-    p.y = p32.y + cy;
-    p.z = p32.z + cz;
-    ps.push_back(p);
+    geometry_msgs::msg::PointStamped p_in, p_out;
+    p_in.point.x = p32.x;
+    p_in.point.y = p32.y;
+    geometry_msgs::msg::TransformStamped ts;
+    ts.transform.translation.x = pose.position.x;
+    ts.transform.translation.y = pose.position.y;
+    ts.transform.rotation = pose.orientation;
+    tf2::doTransform(p_in, p_out, ts);
+    // p.x = p32.x + cx;
+    // p.y = p32.y + cy;
+    // p.z = p32.z + cz;
+    ps.push_back(p_out.point);
   }
   return ps;
 }
@@ -153,10 +172,12 @@ void CostmapGenerator::loadRoadAreasFromObjects(const POMsg & predictedobjects)
   for (const auto & object : predictedobjects.objects) {
     if(object.kinematics.initial_stationary){
       auto road_poly = object.shape.at(0).polygon;
+      // area_points_.push_back(objectpoly2vector(road_poly, 
+      //                                        object.kinematics.initial_pose.pose.position.x, 
+      //                                        object.kinematics.initial_pose.pose.position.y,
+      //                                        object.kinematics.initial_pose.pose.position.z));
       area_points_.push_back(objectpoly2vector(road_poly, 
-                                             object.kinematics.initial_pose.pose.position.x, 
-                                             object.kinematics.initial_pose.pose.position.y,
-                                             object.kinematics.initial_pose.pose.position.z));
+                                             object.kinematics.initial_pose.pose));
     }
     
   }

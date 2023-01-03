@@ -314,10 +314,18 @@ void FreespacePlannerNode::resultCallback(
 {
   using std::placeholders::_1;
   using std::placeholders::_2;
+  if (costmap_result.code != rclcpp_action::ResultCode::SUCCEEDED)
+  {
+    RCLCPP_WARN(get_logger(),"costmap not received! return abort to behavior planner!");
+    auto result = std::make_shared<PlanTrajectoryAction::Result>();
+    result->result = PlanTrajectoryAction::Result::FAIL;
+    planning_goal_handle_->abort(result);
+    stopPlanning();
+    return;
+  }
   RCLCPP_INFO(get_logger(), "Costmap received, planning started.");
 
   occupancy_grid_ = std::make_shared<nav_msgs::msg::OccupancyGrid>(costmap_result.result->costmap);
-
 
   auto send_goal_options = rclcpp_action::Client<GlobalPathMappingAction>::SendGoalOptions();
   send_goal_options.goal_response_callback =
@@ -330,7 +338,7 @@ void FreespacePlannerNode::resultCallback(
   action_goal.occupancy_grid = *occupancy_grid_.get();
   //to do: add gaode_api_route,tf_odom2baselink info into action_goal
   // for test
-  // GaodeApiRoute gaode_api_route;
+  GaodeApiRoute gaode_api_route;
   // geometry_msgs::msg::Pose pose0;
   // pose0.position.x = 1.0;
   // pose0.position.y = -2.0;
@@ -344,22 +352,27 @@ void FreespacePlannerNode::resultCallback(
   // pose2.position.y = 8.0;
   // gaode_api_route.enu_route.push_back(pose2);
   // action_goal.gaode_api_route = gaode_api_route;
+  gaode_api_route.start_enu_pose = start_pose_.pose;
+  gaode_api_route.end_enu_pose = goal_pose_.pose;
+  gaode_api_route.enu_route.push_back(start_pose_.pose);
+  gaode_api_route.enu_route.push_back(goal_pose_.pose);
+  action_goal.gaode_api_route = gaode_api_route;
 
+  
   geometry_msgs::msg::TransformStamped ts;
-  // ts.transform.translation.x = -1;
-  // ts.transform.translation.y = -1;
-  // // to do: add rotation
-  // action_goal.tf_odom2baselink = ts;
   try {
     ts = tf_buffer_->lookupTransform(
-      "base_link", "odom", rclcpp::Time(0),
-      rclcpp::Duration::from_seconds(1.0));
-    action_goal.tf_odom2baselink = ts;
+      "base_link", "odom", rclcpp::Time(0));
+    tf_buffer_->setUsingDedicatedThread(true);
   } catch (tf2::TransformException & ex) {
     RCLCPP_ERROR(this->get_logger(), "Map to from odom to base_link failure: %s", ex.what());
+    auto result = std::make_shared<PlanTrajectoryAction::Result>();
+    result->result = PlanTrajectoryAction::Result::FAIL;
+    planning_goal_handle_->abort(result);
+    stopPlanning();
     return;
   }
-
+  action_goal.tf_odom2baselink = ts;
   global_path_mapping_client_->async_send_goal(action_goal, send_goal_options);
   RCLCPP_INFO(get_logger(), "global path mapping action goal sent.");
 }
@@ -393,9 +406,13 @@ void FreespacePlannerNode::gpm_feedbackCallback(
     std::to_string(end_x)+","+
     std::to_string(end_y));
   
+  start_pose_.pose = feedback->feedback.start_enu_pose;
+  goal_pose_.pose = feedback->feedback.end_enu_pose;
+
   auto planning_result = std::make_shared<PlanTrajectoryAction::Result>();
 
-  bool success = planTrajectory();
+  // bool success = planTrajectory();
+  bool success = false;
 
   if (success) {
     visualizeTrajectory();
@@ -487,7 +504,7 @@ geometry_msgs::msg::TransformStamped FreespacePlannerNode::getTransform(
   geometry_msgs::msg::TransformStamped tf;
   try {
     tf =
-      tf_buffer_->lookupTransform(from, to, rclcpp::Time(0), rclcpp::Duration::from_seconds(1.0));
+      tf_buffer_->lookupTransform(from, to, rclcpp::Time(0));
   } catch (const tf2::TransformException & ex) {
     RCLCPP_ERROR(get_logger(), "%s", ex.what());
   }

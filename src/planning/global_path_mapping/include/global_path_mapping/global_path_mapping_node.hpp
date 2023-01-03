@@ -99,7 +99,7 @@ private:
   Pose result_start_pose_;
   Pose result_end_pose_;
 
-  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr debug_occupancy_grid_publisher_;
+  // rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr debug_occupancy_grid_publisher_;
 
   
   

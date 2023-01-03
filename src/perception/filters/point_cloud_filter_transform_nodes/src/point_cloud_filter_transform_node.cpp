@@ -264,7 +264,11 @@ PointCloud2FilterTransformNode::process_imu_message(
                                                       0.0,
                                                       static_cast<float>(-pow(0.5,0.5))};
   Eigen::Quaternionf imu_quat = quat_enu2nwu * imu_quat_enu * quat_nwu2enu;
-  // euler_tmp = imu_quat.toRotationMatrix().eulerAngles(2,1,0);
+  // // base_link坐标系，相对于odom坐标系有一个平移和yaw角的旋转，roll, pitch旋转是axis到base_link坐标系
+  // Eigen::Vector3f euler_tmp = imu_quat.toRotationMatrix().eulerAngles(2,1,0);
+  // Eigen::Quaternionf imu_quat_rp = Eigen::AngleAxisf(0,Eigen::Vector3f::UnitZ()) *
+  //                                   Eigen::AngleAxisf(euler_tmp.y(),Eigen::Vector3f::UnitY()) *
+  //                                   Eigen::AngleAxisf(euler_tmp.x(),Eigen::Vector3f::UnitX());
   // RCLCPP_INFO(get_logger(), "car2ground x,y,z="+std::to_string(euler_tmp.x()*180/pi)+","+std::to_string(euler_tmp.y()*180/pi)+","+std::to_string(euler_tmp.z()*180/pi));
 
   // // 以下为获取欧拉角,并修正eulerangles的x默认必须是[0,pi]的问题

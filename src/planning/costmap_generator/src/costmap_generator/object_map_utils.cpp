@@ -94,16 +94,13 @@ void fillPolygonAreas(
 
   //remove guide dog obstacle
   std::vector<cv::Point> cv_polygon;
-  cv_polygon.emplace_back(-0.2/out_grid_map.getResolution(), -0.4/out_grid_map.getResolution());//left bottom
-  cv_polygon.emplace_back(0.2/out_grid_map.getResolution(), -0.4/out_grid_map.getResolution());//right bottom
-  cv_polygon.emplace_back(0.2/out_grid_map.getResolution(), 0.4/out_grid_map.getResolution());//right top
-  cv_polygon.emplace_back(-0.2/out_grid_map.getResolution(), 0.4/out_grid_map.getResolution());//left top
+  cv_polygon.emplace_back((origin_x_offset-1.0)/out_grid_map.getResolution(), (origin_y_offset-1.0)/out_grid_map.getResolution());//left bottom
+  cv_polygon.emplace_back((origin_x_offset+1.0)/out_grid_map.getResolution(), (origin_y_offset-1.0)/out_grid_map.getResolution());//right bottom
+  cv_polygon.emplace_back((origin_x_offset+1.0)/out_grid_map.getResolution(), (origin_y_offset+1.0)/out_grid_map.getResolution());//right top
+  cv_polygon.emplace_back((origin_x_offset-1.0)/out_grid_map.getResolution(), (origin_y_offset+1.0)/out_grid_map.getResolution());//left top
   std::vector<std::vector<cv::Point>> cv_polygons;
   cv_polygons.push_back(cv_polygon);
-  assert(in_fill_color == 0);
-  cv::fillPoly(merged_filled_image, cv_polygons, cv::Scalar(1));
-
-
+  cv::fillPoly(merged_filled_image, cv_polygons, cv::Scalar(255));
 
   // convert to ROS msg
   grid_map::GridMapCvConverter::addLayerFromImage<unsigned char, 1>(

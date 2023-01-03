@@ -201,7 +201,7 @@ class TestBasicUsage(unittest.TestCase):
         
         goal = PlannerCostmap.Goal()
         goal.route.header.stamp = generate_costmap_client.get_clock().now().to_msg()
-        goal.route.header.frame_id = "map"
+        goal.route.header.frame_id = "odom"
         # short route because mocked lanelet is very small
         goal.route.start_pose.position.x = 10.0
         goal.route.start_pose.position.y = 12.5
