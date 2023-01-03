@@ -126,6 +126,8 @@ private:
   std::shared_ptr<tf2_ros::Buffer> m_tf_buffer;
   std::shared_ptr<tf2_ros::TransformListener> m_tf_listener;
 
+  std::shared_ptr<rclcpp::Time> last_request_time{nullptr};
+
   // callbacks
   void on_ego_state(const State::SharedPtr & msg);
   void on_route(const GaodeApiRoute::SharedPtr & msg);

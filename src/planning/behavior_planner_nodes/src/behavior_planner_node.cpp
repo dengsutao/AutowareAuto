@@ -194,6 +194,7 @@ void BehaviorPlannerNode::result_callback(const PlanTrajectoryGoalHandle::Wrappe
 
   // finished requesting trajectory
   m_requesting_trajectory = false;
+  last_request_time = std::make_shared<rclcpp::Time>(get_clock()->now());
 }
 
 State BehaviorPlannerNode::transform_to_map(const State & state)
@@ -283,12 +284,17 @@ void BehaviorPlannerNode::on_ego_state(const State::SharedPtr & msg)
       request_trajectory(m_planner->get_current_subroute(m_ego_state));
       m_requesting_trajectory = true;
       m_log_goal_reached = true;
-    } else if (m_planner->needs_new_trajectory(m_ego_state)) {
+    // } else if (m_planner->needs_new_trajectory(m_ego_state)) {
+    } else if (last_request_time==nullptr || (get_clock()->now()-(*last_request_time))>=rclcpp::Duration::from_seconds(0.5)) {
       // update trajectory for current subroute
       request_trajectory(m_planner->get_current_subroute(m_ego_state));
       m_requesting_trajectory = true;
       m_log_goal_reached = true;
     }
+    // else{
+    //   auto duration = (get_clock()->now()-(*last_request_time));
+    //   RCLCPP_INFO(get_logger(),std::to_string(duration.seconds()));
+    // }
   }
 
   if (!m_planner->is_trajectory_ready()) {
@@ -332,7 +338,7 @@ void BehaviorPlannerNode::on_ego_state(const State::SharedPtr & msg)
           &BehaviorPlannerNode::modify_trajectory_response,
           this, std::placeholders::_1));
     } else {
-      RCLCPP_INFO(get_logger(), "publish trajectory");
+      // RCLCPP_INFO(get_logger(), "publish trajectory");
       m_trajectory_pub->publish(trajectory);
     }
   }

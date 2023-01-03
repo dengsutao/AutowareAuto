@@ -233,11 +233,12 @@ void AstarSearch::setOccupancyGrid(const nav_msgs::msg::OccupancyGrid & costmap)
   const auto width = costmap_.info.width;
 
   // Initialize nodes
-  nodes_.clear();
+  // nodes_.clear();
   nodes_.resize(height);
   for (size_t i = 0; i < height; i++) {
     nodes_[i].resize(width);
     for (size_t j = 0; j < width; j++) {
+      nodes_[i][j].clear();
       nodes_[i][j].resize(planner_common_param_.theta_size);
     }
   }
