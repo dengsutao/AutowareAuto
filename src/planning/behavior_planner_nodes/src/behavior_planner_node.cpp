@@ -139,7 +139,7 @@ void BehaviorPlannerNode::init()
 
   // Setup publishers
   m_trajectory_pub =
-    this->create_publisher<Trajectory>("trajectory", QoS{10});
+    this->create_publisher<Trajectory>("trajectory", QoS{1});
   m_debug_trajectory_pub =
     this->create_publisher<Trajectory>("debug/full_trajectory", QoS{10});
   m_debug_checkpoints_pub =
