@@ -95,7 +95,7 @@ GlobalPathMappingNode::GlobalPathMappingNode(const rclcpp::NodeOptions & options
 :  Node("global_path_mapping", options)
 {
   // declare_parameter<float64_t>("distance_th", 5.0);
-  declare_parameter<float64_t>("len_forward_per_step", 2.0);
+  declare_parameter<float64_t>("len_forward_per_step", 5.0);
   // declare_parameter<float64_t>("distance_obj_th", 1.0);
   // debug_occupancy_grid_publisher_ =
   //   this->create_publisher<nav_msgs::msg::OccupancyGrid>("/debug/occupancy_grid", 1);
