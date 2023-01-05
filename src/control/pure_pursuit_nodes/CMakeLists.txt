@@ -19,6 +19,17 @@ cmake_minimum_required(VERSION 3.5)
 ### Export headers
 project(pure_pursuit_nodes)
 
+# # Default to C99
+# if(NOT CMAKE_C_STANDARD)
+#   set(CMAKE_C_STANDARD 99)
+# endif()
+
+# # Default to C++14
+# if(NOT CMAKE_CXX_STANDARD)
+#   set(CMAKE_CXX_STANDARD 17)
+# endif()
+
+
 ## dependencies
 find_package(ament_cmake_auto REQUIRED)
 find_package(Eigen3 REQUIRED)
@@ -30,6 +41,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/pure_pursuit_node.cpp
 )
 autoware_set_compile_options(${PROJECT_NAME})
+target_compile_options(${PROJECT_NAME} PRIVATE -Wno-error=old-style-cast -Wno-error=unused-variable -Wno-error=unused-parameter)
 
 set(PURE_PURSUIT_NODE_EXE pure_pursuit_node_exe)
 ament_auto_add_executable(${PURE_PURSUIT_NODE_EXE} src/pure_pursuit_node_main.cpp)
@@ -50,5 +62,5 @@ endif()
 
 ## install stuff
 ament_auto_package(
-  INSTALL_TO_SHARE param
+  INSTALL_TO_SHARE param launch
 )

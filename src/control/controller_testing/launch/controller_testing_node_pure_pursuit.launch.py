@@ -67,7 +67,7 @@ def generate_launch_description():
 
     real_time_sim_param = DeclareLaunchArgument(
         'real_time_sim',
-        default_value='False',
+        default_value='True',
         description='Launch RVIZ2 in addition to other nodes'
     )
 

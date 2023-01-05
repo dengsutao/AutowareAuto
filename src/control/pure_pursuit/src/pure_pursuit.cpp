@@ -61,7 +61,7 @@ VehicleControlCommand PurePursuit::compute_command_impl(const TrajectoryPointSta
   if (is_success) {
     m_command.long_accel_mps2 = compute_command_accel_mps(current_point, false);
     m_command.front_wheel_angle_rad = compute_steering_rad(current_point);
-    m_command.rear_wheel_angle_rad = 0.0F;
+    m_command.rear_wheel_angle_rad = compute_rotation_velocity(current_point);
     // Use velocity of the next immediate trajectory point as the target velocity
     m_command.velocity_mps = get_reference_trajectory().points[get_current_state_spatial_index()
       ].longitudinal_velocity_mps;
@@ -318,6 +318,20 @@ float32_t PurePursuit::compute_steering_rad(const TrajectoryPoint & current_poin
   const float32_t curvature = (denominator > epsilon) ? ((2.0F * numerator) / denominator) : 0.0F;
   const float32_t steering_angle_rad = atanf(curvature * m_config.get_distance_front_rear_wheel());
   return steering_angle_rad;
+}
+////////////////////////////////////////////////////////////////////////////////
+float32_t PurePursuit::compute_rotation_velocity(const TrajectoryPoint & current_point)
+{
+  // Compute the steering angle by arctan(curvature * wheel_distance)
+  // link: https://www.ri.cmu.edu/pub_files/2009/2/
+  //       Automatic_Steering_Methods_for_Autonomous_Automobile_Path_Tracking.pdf
+  const float32_t denominator = compute_points_distance_squared(current_point, m_target_point);
+  const float32_t numerator = compute_relative_xy_offset(current_point, m_target_point).second;
+  constexpr float32_t epsilon = 0.0001F;
+  // equivalent to (2 * y) / (distance * distance) = (2 * sin(th)) / distance
+  const float32_t curvature = (denominator > epsilon) ? ((2.0F * numerator) / denominator) : 0.0F;
+  const float32_t rotation_velocity = curvature * current_point.longitudinal_velocity_mps;
+  return rotation_velocity;
 }
 ////////////////////////////////////////////////////////////////////////////////
 float32_t PurePursuit::compute_command_accel_mps(

@@ -107,6 +107,10 @@ private:
   /// \param[in] current_point The current position and velocity information
   /// \return the computed steering angle (radian)
   PURE_PURSUIT_LOCAL float32_t compute_steering_rad(const TrajectoryPoint & current_point);
+    /// \brief Compute the rotation velocity in two wheel model using the current pose and the target point
+  /// \param[in] current_point The current position and velocity information
+  /// \return the computed rotation velocity (radian)
+  PURE_PURSUIT_LOCAL float32_t compute_rotation_velocity(const TrajectoryPoint & current_point);
   /// \brief Compute the acceleration command (mps) using the current pose and the target point
   /// \param[in] current_point The current position and velocity information
   /// \param[in] is_emergency The boolean whether the current state is emergency mode or not

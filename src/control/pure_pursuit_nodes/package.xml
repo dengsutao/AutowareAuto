@@ -13,7 +13,13 @@
     <depend>controller_common_nodes</depend>
     <depend>pure_pursuit</depend>
 
-    <build_depend>motion_common</build_depend>
+    <depend>motion_common</depend>
+    <depend>autoware_auto_control_msgs</depend>
+    <depend>autoware_auto_planning_msgs</depend>
+    <depend>autoware_auto_system_msgs</depend>
+    <depend>autoware_auto_vehicle_msgs</depend>
+    <depend>trajectory_follower</depend>
+
     <build_depend>time_utils</build_depend>
     <build_depend>autoware_auto_common</build_depend>
 
