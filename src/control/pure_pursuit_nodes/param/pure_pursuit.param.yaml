@@ -7,7 +7,7 @@
     control_rate: 30.0
     delay_compensation_time: 0.17
     enable_overshoot_emergency: false
-    enable_smooth_stop: false
+    enable_smooth_stop: true
     state_transition:
       drive_state_stop_dist: 0.5
       drive_state_offset_stop_dist: 1.0

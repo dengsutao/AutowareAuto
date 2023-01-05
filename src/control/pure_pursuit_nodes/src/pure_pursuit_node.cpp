@@ -421,16 +421,16 @@ PurePursuitNode::ControlState PurePursuitNode::updateControlState(
     }
 
     if (m_enable_smooth_stop) {
-      // if (stopping_condition) {
-      //   // predictions after input time delay
-      //   const float64_t pred_vel_in_target =
-      //     predictedVelocityInTargetPoint(control_data.current_motion, m_delay_compensation_time);
-      //   const float64_t pred_stop_dist =
-      //     control_data.stop_dist -
-      //     0.5 * (pred_vel_in_target + current_vel) * m_delay_compensation_time;
-      //   m_smooth_stop.init(pred_vel_in_target, pred_stop_dist);
-      //   return ControlState::STOPPING;
-      // }
+      if (stopping_condition) {
+        // predictions after input time delay
+        const float64_t pred_vel_in_target =
+          predictedVelocityInTargetPoint(control_data.current_motion, m_delay_compensation_time);
+        const float64_t pred_stop_dist =
+          control_data.stop_dist -
+          0.5 * (pred_vel_in_target + current_vel) * m_delay_compensation_time;
+        m_smooth_stop.init(pred_vel_in_target, pred_stop_dist);
+        return ControlState::STOPPING;
+      }
     } else {
       if (stopped_condition && !departure_condition_from_stopped) {
         return ControlState::STOPPED;
@@ -465,57 +465,21 @@ PurePursuitNode::ControlState PurePursuitNode::updateControlState(
   return current_control_state;
 }
 
-// float64_t PurePursuitNode::predictedVelocityInTargetPoint(
-//   const Motion current_motion, const float64_t delay_compensation_time) const
-// {
-//   const float64_t current_vel = current_motion.vel;
-//   const float64_t current_acc = current_motion.acc;
+float64_t PurePursuitNode::predictedVelocityInTargetPoint(
+  const Motion current_motion, const float64_t delay_compensation_time) const
+{
+  const float64_t current_vel = current_motion.vel;
+  const float64_t current_acc = current_motion.acc;
 
-//   if (std::fabs(current_vel) < 1e-01) {  // when velocity is low, no prediction
-//     return current_vel;
-//   }
+  if (std::fabs(current_vel) < 1e-01) {  // when velocity is low, no prediction
+    return current_vel;
+  }
 
-//   const float64_t current_vel_abs = std::fabs(current_vel);
-//   if (m_ctrl_cmd_vec.size() == 0) {
-//     const float64_t pred_vel = current_vel + current_acc * delay_compensation_time;
-//     // avoid to change sign of current_vel and pred_vel
-//     return pred_vel > 0 ? std::copysign(pred_vel, current_vel) : 0.0;
-//   }
-
-//   float64_t pred_vel = current_vel_abs;
-
-//   const auto past_delay_time =
-//     this->now() - rclcpp::Duration::from_seconds(delay_compensation_time);
-//   for (std::size_t i = 0; i < m_ctrl_cmd_vec.size(); ++i) {
-//     if (
-//       (this->now() - m_ctrl_cmd_vec.at(i).stamp).seconds() <
-//       m_delay_compensation_time)
-//     {
-//       if (i == 0) {
-//         // size of m_ctrl_cmd_vec is less than m_delay_compensation_time
-//         pred_vel =
-//           current_vel_abs + static_cast<float64_t>(m_ctrl_cmd_vec.at(i).acceleration) *
-//           delay_compensation_time;
-//         return pred_vel > 0 ? std::copysign(pred_vel, current_vel) : 0.0;
-//       }
-//       // add velocity to accel * dt
-//       const float64_t acc = m_ctrl_cmd_vec.at(i - 1).acceleration;
-//       const auto curr_time_i = rclcpp::Time(m_ctrl_cmd_vec.at(i).stamp);
-//       const float64_t time_to_next_acc = std::min(
-//         (curr_time_i - rclcpp::Time(m_ctrl_cmd_vec.at(i - 1).stamp)).seconds(),
-//         (curr_time_i - past_delay_time).seconds());
-//       pred_vel += acc * time_to_next_acc;
-//     }
-//   }
-
-//   const float64_t last_acc = m_ctrl_cmd_vec.at(m_ctrl_cmd_vec.size() - 1).acceleration;
-//   const float64_t time_to_current =
-//     (this->now() - m_ctrl_cmd_vec.at(m_ctrl_cmd_vec.size() - 1).stamp).seconds();
-//   pred_vel += last_acc * time_to_current;
-
-//   // avoid to change sign of current_vel and pred_vel
-//   return pred_vel > 0 ? std::copysign(pred_vel, current_vel) : 0.0;
-// }
+  const float64_t current_vel_abs = std::fabs(current_vel);
+  const float64_t pred_vel = current_vel + current_acc * delay_compensation_time;
+  // avoid to change sign of current_vel and pred_vel
+  return pred_vel > 0 ? std::copysign(pred_vel, current_vel) : 0.0;
+}
 
 PurePursuitNode::Motion PurePursuitNode::calcCtrlCmd(
   const ControlState & current_control_state, const TrajectoryPointStamped & current_pose,
