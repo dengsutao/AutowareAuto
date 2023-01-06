@@ -9,7 +9,7 @@
     enable_overshoot_emergency: false
     enable_smooth_stop: true
     state_transition:
-      drive_state_stop_dist: 0.5
+      drive_state_stop_dist: 0.3
       drive_state_offset_stop_dist: 1.0
       stopping_state_stop_dist: 0.49
       stopped_state_entry_vel: 0.1
@@ -21,14 +21,14 @@
 
 
     controller:
-      minimum_lookahead_distance:      6.0
-      maximum_lookahead_distance:      100.0
+      minimum_lookahead_distance:      3.0
+      maximum_lookahead_distance:      10.0
       speed_to_lookahead_ratio:        2.0
       is_interpolate_lookahead_point:  true
       is_delay_compensation:           false
       emergency_stop_distance:         0.1
       speed_thres_traveling_direction: 0.3
-      maximum_acceleration:            10.0
+      maximum_acceleration:            1.0
       dist_front_rear_wheels:          2.7
 
     # smooth stop state
