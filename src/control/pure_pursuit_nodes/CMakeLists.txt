@@ -41,7 +41,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/pure_pursuit_node.cpp
 )
 autoware_set_compile_options(${PROJECT_NAME})
-target_compile_options(${PROJECT_NAME} PRIVATE -Wno-error=old-style-cast -Wno-error=unused-variable -Wno-error=unused-parameter)
+target_compile_options(${PROJECT_NAME} PRIVATE -Wno-error=old-style-cast -Wno-error=unused-variable -Wno-error=unused-parameter -Wno-error=unused-but-set-variable)
 
 set(PURE_PURSUIT_NODE_EXE pure_pursuit_node_exe)
 ament_auto_add_executable(${PURE_PURSUIT_NODE_EXE} src/pure_pursuit_node_main.cpp)

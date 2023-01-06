@@ -742,12 +742,12 @@ def main():
     prev_state_msg = ctn.create_state(pose_x=0.0, pose_y=0.0, pose_ori=0.0, v=10.0, frame_id='odom')
     current_state_msg = ctn.create_state(pose_x=0.1, pose_y=0.1, pose_ori=0.0, v=20.0, frame_id='odom')
     trajectory_msg = ctn.create_curved_trajectory(init_state=current_state_msg,
-                                                  length=80, 
-                                                  discretization_m=1.0,
-                                                  speed_start=3.0, 
-                                                  speed_max=3.0, 
+                                                  length=3, 
+                                                  discretization_m=0.1,
+                                                  speed_start=1.0, 
+                                                  speed_max=2.0, 
                                                   speed_increments=0.0, 
-                                                  stopping_decel=1.0,
+                                                  stopping_decel=0.5,
                                                   heading_rate=0.05, 
                                                   heading_rate_max=0.05, 
                                                   heading_rate_increments=0.05
@@ -770,7 +770,29 @@ def main():
     print(1)
 
 
+def luce():
+    rclpy.init()
+    ctn = ControllerTestingNode2()
+
+    # Create fake topics: state , trajectory , tf
+    current_state_msg = ctn.create_state(pose_x=0.1, pose_y=0.1, pose_ori=0.0, v=0.1, frame_id='odom')
+    trajectory_msg = ctn.create_curved_trajectory(init_state=current_state_msg,
+                                                  length=30, 
+                                                  discretization_m=.501,
+                                                  speed_start=1.0, 
+                                                  speed_max=2.0, 
+                                                  speed_increments=0.1, 
+                                                  stopping_decel=0.5,
+                                                  heading_rate=0.05, 
+                                                  heading_rate_max=0.05, 
+                                                  heading_rate_increments=0.05
+                                                  )
+
+
+
+    ctn._publisher_trajectory.publish(trajectory_msg)
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+    luce()

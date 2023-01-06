@@ -118,7 +118,7 @@ def generate_launch_description():
                                    'pure_pursuit.param.yaml')],
         remappings=[
             ("input/current_trajectory", "/planning/trajectory"),
-            ("input/current_state", "/vehicle/vehicle_kinematic_state"),
+            ("input/current_state", "/localization/vehicle_kinematic_state"),
         ]
     )
 

@@ -178,6 +178,8 @@ void PurePursuitNode::callbackTimerControl()
     return;
   }
   
+  RCLCPP_INFO(get_logger(), "Control node is ready.");
+
   // // transform state to the same frame as the trajectory
   geometry_msgs::msg::TransformStamped tf = tf_buffer_->lookupTransform(
     m_trajectory_ptr->header.frame_id,
@@ -214,11 +216,12 @@ void PurePursuitNode::callbackTimerControl()
   // calculate control command
   const Motion raw_ctrl_cmd = calcCtrlCmd(m_control_state, current_states_stamped_tf, control_data);
 
-  // // publish control command
+  // publish control command
   publishCtrlCmd(raw_ctrl_cmd, control_data.current_motion.vel);
 
-  // // publish debug data
-  // publishDebugData(ctrl_cmd, control_data);
+  // // // publish debug data
+  // // publishDebugData(ctrl_cmd, control_data);
+  // return;
 }
 
 float64_t PurePursuitNode::getDt()
@@ -334,6 +337,7 @@ void PurePursuitNode::callbackCurrentState(
 {
   if (m_current_state_ptr) {
     m_prev_state_ptr = m_current_state_ptr;
+    RCLCPP_INFO(get_logger(), "Control node: state is ready.");
   }
   m_current_state_ptr = std::make_shared<autoware_auto_vehicle_msgs::msg::VehicleKinematicState>(
     *msg);
@@ -359,6 +363,7 @@ void PurePursuitNode::callbackTrajectory(
 
   m_trajectory_ptr = std::make_shared<autoware_auto_planning_msgs::msg::Trajectory>(*msg);
   m_ppcontroller_->set_trajectory(*m_trajectory_ptr);
+  RCLCPP_INFO(get_logger(), "Control node: trajectory is ready.");
 }
 
 // Do not use nearest_idx here
@@ -373,9 +378,7 @@ void PurePursuitNode::publishCtrlCmd(const Motion & ctrl_cmd, float64_t current_
   cmd.angular.x = 0.0;
   cmd.angular.y = 0.0;
   cmd.angular.z = static_cast<decltype(cmd.angular.z)>(ctrl_cmd.ang_z);
-  while(true){
-    m_pub_control_cmd->publish(cmd);
-  }
+  m_pub_control_cmd->publish(cmd);
   
   // store current velocity history
   m_vel_hist.push_back({this->now(), current_vel});
@@ -520,14 +523,16 @@ PurePursuitNode::Motion PurePursuitNode::calcCtrlCmd(
   } else if (current_control_state == ControlState::STOPPED) {
     // This acceleration is without slope compensation
     const auto & p = m_stopped_state_params;
-    raw_ctrl_cmd.vel = trajectory_follower::longitudinal_utils::applyDiffLimitFilter(
-      p.vel,
-      m_prev_raw_ctrl_cmd.vel,
-      control_data.dt, p.acc);
-    raw_ctrl_cmd.acc = trajectory_follower::longitudinal_utils::applyDiffLimitFilter(
-      p.acc,
-      m_prev_raw_ctrl_cmd.acc,
-      control_data.dt, p.jerk);
+    // raw_ctrl_cmd.vel = trajectory_follower::longitudinal_utils::applyDiffLimitFilter(
+    //   p.vel,
+    //   m_prev_raw_ctrl_cmd.vel,
+    //   control_data.dt, p.acc);
+    // raw_ctrl_cmd.acc = trajectory_follower::longitudinal_utils::applyDiffLimitFilter(
+    //   p.acc,
+    //   m_prev_raw_ctrl_cmd.acc,
+    //   control_data.dt, p.jerk);
+    raw_ctrl_cmd.vel = control_data.dt * p.acc;
+    raw_ctrl_cmd.acc = p.acc;
     raw_ctrl_cmd.ang_z = 0.0;
     RCLCPP_DEBUG(
       get_logger(), "[Stopped]. vel: %3.3f, acc: %3.3f",
